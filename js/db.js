@@ -32,9 +32,13 @@
   const uid = () => 's_' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
 
   // ===================== STUDENTS =====================
+  function logErr(where, err) {
+    if (err) console.error('[DB:'+where+']', err.message || err, err);
+  }
   async function listStudents() {
     if (useSupabase) {
-      const { data } = await sb.from('students').select('*').order('name');
+      const { data, error } = await sb.from('students').select('*').order('name');
+      logErr('listStudents', error);
       return data || [];
     }
     return ls.get('students', []);
@@ -43,7 +47,9 @@
     name = (name||'').trim(); gender = (gender||'').trim();
     if (!name) return null;
     if (useSupabase) {
-      const { data } = await sb.from('students').insert({ name, gender }).select().single();
+      const { data, error } = await sb.from('students').insert({ name, gender }).select().single();
+      logErr('addStudent', error);
+      if (error) alert('Could not add student:\n' + (error.message || error));
       return data;
     }
     const list = ls.get('students', []);
@@ -51,7 +57,11 @@
     list.push(stu); ls.set('students', list); return stu;
   }
   async function deleteStudent(id) {
-    if (useSupabase) { await sb.from('students').delete().eq('id', id); return; }
+    if (useSupabase) {
+      const { error } = await sb.from('students').delete().eq('id', id);
+      logErr('deleteStudent', error);
+      return;
+    }
     ls.set('students', ls.get('students',[]).filter(s => s.id !== id));
     // also drop their completions + scores so the UI stays consistent
     ls.set('scores', ls.get('scores',[]).filter(s => s.student_id !== id));
