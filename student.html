@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en-NZ">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Maths Game · Student</title>
+<style>
+  :root {
+    --bg:#fff7ec; --ink:#1d1d24; --muted:#6c6c75;
+    --primary:#ff8a3d; --primary-ink:#a84a00;
+    --good:#2ebf72; --bad:#e45858;
+    --boy-bg:#cfeafd; --boy-ink:#155e8e;
+    --girl-bg:#ffd6e6; --girl-ink:#c2185b;
+    --shadow:0 6px 0 rgba(0,0,0,0.14);
+    --card:#fff;
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; padding:0; min-height:100vh; font-family:'Nunito','Trebuchet MS',sans-serif;
+              background:var(--bg); color:var(--ink); }
+  .wrap { max-width:760px; margin:0 auto; padding:18px 16px 40px; }
+  header.bar { display:flex; justify-content:space-between; align-items:center;
+               background:#fff; border:3px solid var(--ink); border-radius:18px;
+               padding:10px 14px; box-shadow:var(--shadow); margin-bottom:16px; }
+  .title { font-size:20px; font-weight:900; }
+  .who { font-weight:800; font-size:13px; }
+  .who .name { color:var(--primary-ink); }
+
+  .card { background:var(--card); border:3px solid var(--ink); border-radius:20px;
+          padding:22px; box-shadow:var(--shadow); }
+  h2.page-title { margin:0 0 14px; font-size:24px; text-align:center; }
+  .hidden { display:none !important; }
+
+  /* Gender picker */
+  .gender-row { display:flex; gap:14px; }
+  .gender-row .gx {
+    flex:1; min-height:160px; border:4px solid var(--ink); border-radius:24px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:10px; cursor:pointer; font-size:24px; font-weight:900;
+    box-shadow:var(--shadow); transition:transform 0.06s;
+  }
+  .gender-row .gx:active { transform:translateY(2px); box-shadow:0 4px 0 rgba(0,0,0,0.18); }
+  .gender-row .gx.boy  { background:var(--boy-bg);  color:var(--boy-ink); }
+  .gender-row .gx.girl { background:var(--girl-bg); color:var(--girl-ink); }
+  .gender-row .gx .ico { font-size:60px; }
+
+  /* Names list */
+  .names-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px; }
+  .names-grid .nm {
+    border:3px solid var(--ink); background:#fff8e8; border-radius:14px;
+    padding:14px 10px; font-weight:900; font-size:18px;
+    cursor:pointer; text-align:center; box-shadow:0 4px 0 rgba(0,0,0,0.12);
+  }
+  .names-grid .nm:active { transform:translateY(2px); box-shadow:0 2px 0 rgba(0,0,0,0.12); }
+
+  /* Confirm dialog */
+  .confirm-msg { font-size:22px; font-weight:900; text-align:center; margin:10px 0 18px; }
+  .yn-row { display:flex; gap:12px; justify-content:center; }
+  .btn { background:var(--primary); color:#fff; border:3px solid var(--ink);
+         border-radius:14px; padding:12px 22px; font-size:18px; font-weight:900;
+         cursor:pointer; box-shadow:0 4px 0 var(--primary-ink); }
+  .btn:active { transform:translateY(2px); box-shadow:0 2px 0 var(--primary-ink); }
+  .btn.secondary { background:#fff; color:var(--ink); box-shadow:0 4px 0 rgba(0,0,0,0.25); }
+  .btn.good { background:var(--good); box-shadow:0 4px 0 #0e6b37; }
+  .btn.bad  { background:var(--bad);  box-shadow:0 4px 0 #8a1e1e; }
+
+  /* Page 2 game tiles */
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px; }
+  .tile {
+    border:4px solid var(--ink); border-radius:20px; padding:18px;
+    background:#fff8e8; box-shadow:var(--shadow);
+    display:flex; flex-direction:column; gap:8px; align-items:center; text-align:center;
+    cursor:pointer; transition:transform 0.06s;
+  }
+  .tile:active { transform:translateY(2px); box-shadow:0 4px 0 rgba(0,0,0,0.18); }
+  .tile.locked { opacity:0.55; cursor:not-allowed; background:#f1ede4; }
+  .tile .label { font-size:17px; font-weight:900; }
+  .tile .sub { font-size:13px; color:var(--muted); }
+  .tile .ico { font-size:42px; }
+  .tile .badge { background:var(--primary); color:#fff; border-radius:999px;
+                 padding:3px 10px; font-size:11px; font-weight:900; }
+  .tile.done .badge { background:var(--good); }
+  .lock-msg { font-size:13px; color:var(--bad); font-weight:800; min-height:18px; text-align:center; }
+
+  .empty { color:var(--muted); font-style:italic; padding:6px 0; text-align:center; }
+  .switch-link { font-size:13px; color:var(--primary-ink); font-weight:800;
+                 background:none; border:none; cursor:pointer; padding:6px 8px; }
+
+  @media (max-width:520px) { .gender-row { flex-direction:column; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="bar">
+    <div class="title">📐 Maths Game</div>
+    <div class="who" id="who-strip">
+      <button class="switch-link" id="switch-user" hidden>↩︎ Not me</button>
+    </div>
+  </header>
+
+  <!-- Page 1A: gender -->
+  <section id="screen-gender" class="card">
+    <h2 class="page-title">Are you a girl or a boy?</h2>
+    <div class="gender-row">
+      <button class="gx girl" data-v="girl"><span class="ico">👧</span><span>Girl</span></button>
+      <button class="gx boy"  data-v="boy"><span class="ico">👦</span><span>Boy</span></button>
+    </div>
+  </section>
+
+  <!-- Page 1B: name -->
+  <section id="screen-name" class="card hidden">
+    <h2 class="page-title">Tap your name</h2>
+    <div class="names-grid" id="names-grid"></div>
+    <p id="names-empty" class="empty hidden">No names yet — ask your teacher to add you in the Teacher panel.</p>
+    <div class="yn-row" style="margin-top:18px;">
+      <button class="btn secondary" id="back-to-gender">← Back</button>
+    </div>
+  </section>
+
+  <!-- Page 1C: confirm -->
+  <section id="screen-confirm" class="card hidden">
+    <p class="confirm-msg" id="confirm-msg">Kia ora! If you're …, click yes.</p>
+    <div class="yn-row">
+      <button class="btn good" id="confirm-yes">👍 Yes, that's me</button>
+      <button class="btn bad"  id="confirm-no">👎 No</button>
+    </div>
+  </section>
+
+  <!-- Page 2 -->
+  <section id="screen-page2" class="card hidden">
+    <h2 class="page-title">What would you like to do?</h2>
+    <div class="tiles" id="tiles"></div>
+    <p class="lock-msg" id="lock-msg"></p>
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/tts.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+let state = {
+  gender: null,    // 'girl' | 'boy'
+  studentId: null,
+  studentName: null,
+  students: [],
+  games: [],
+  practiceDone: false,
+  game1Done: false,
+};
+
+// On returning from a quiz, restore the chosen student
+const SESSION_KEY = 'mg.session.v1';
+function saveSession(){ try { sessionStorage.setItem(SESSION_KEY, JSON.stringify({ gender:state.gender, id:state.studentId, name:state.studentName })); } catch(e){} }
+function loadSession(){ try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); } catch(e){ return null; } }
+function clearSession(){ try { sessionStorage.removeItem(SESSION_KEY); } catch(e){} }
+
+function showScreen(id) {
+  ['screen-gender','screen-name','screen-confirm','screen-page2'].forEach(s => $(s).classList.add('hidden'));
+  $(id).classList.remove('hidden');
+  // Stop any TTS when changing screen
+  TTS.stop();
+}
+
+function updateWhoStrip() {
+  const strip = $('who-strip');
+  if (state.studentName) {
+    strip.innerHTML = `<span class="name">👋 ${escapeHtml(state.studentName)}</span> &nbsp; <button class="switch-link" id="switch-user">↩︎ Not me</button>`;
+    document.getElementById('switch-user').onclick = signOut;
+  } else {
+    strip.innerHTML = '';
+  }
+}
+
+// ---------- gender pick ----------
+document.querySelectorAll('.gx').forEach(b => {
+  b.onclick = async () => {
+    state.gender = b.dataset.v;
+    await renderNames();
+    showScreen('screen-name');
+  };
+});
+$('back-to-gender').onclick = () => { state.gender = null; showScreen('screen-gender'); };
+
+async function renderNames() {
+  state.students = await DB.listStudents();
+  const grid = $('names-grid'); grid.innerHTML = '';
+  const filtered = state.students.filter(s => s.gender === state.gender)
+                                  .sort((a,b) => a.name.localeCompare(b.name));
+  $('names-empty').classList.toggle('hidden', filtered.length > 0);
+  for (const s of filtered) {
+    const b = document.createElement('button');
+    b.className = 'nm';
+    b.textContent = s.name;
+    b.onclick = () => askConfirm(s);
+    grid.appendChild(b);
+  }
+}
+
+// ---------- confirm ----------
+function askConfirm(s) {
+  state.studentId = s.id; state.studentName = s.name;
+  const msg = `Kia ora! If you're ${s.name}, click yes.`;
+  $('confirm-msg').textContent = msg;
+  showScreen('screen-confirm');
+  // Read it out (en-GB female)
+  TTS.speak(msg, { gender: 'female' });
+}
+$('confirm-yes').onclick = async () => {
+  // pull completion status, save session, show page 2
+  saveSession();
+  state.practiceDone = await DB.hasCompleted(state.studentId, 'practice');
+  state.game1Done    = await DB.hasCompleted(state.studentId, 'game1');
+  state.games        = await DB.listGames();
+  updateWhoStrip();
+  await renderPage2();
+  showScreen('screen-page2');
+};
+$('confirm-no').onclick = () => {
+  state.studentId = null; state.studentName = null;
+  clearSession();
+  showScreen('screen-name');
+};
+
+// ---------- page 2 ----------
+async function renderPage2() {
+  const tiles = $('tiles'); tiles.innerHTML = '';
+  $('lock-msg').textContent = '';
+  // Practice (always available, points to geometry-quiz.html)
+  tiles.appendChild(makeTile({
+    label:'Practice', sub:'Warm up your shape brain', ico:'📚',
+    badge: state.practiceDone ? 'Done ✓' : 'Start here',
+    done: state.practiceDone,
+    onClick: openPractice,
+  }));
+  // Game 1
+  const g1 = state.games.find(g => g.slot === 'game1');
+  tiles.appendChild(makeTile({
+    label: g1 ? g1.name : 'Yesterday Me vs. Today Me',
+    sub: 'Game 1 · Beat your own best score',
+    ico:'⚡',
+    badge: state.game1Done ? 'Played ✓' : 'Game 1',
+    done: state.game1Done,
+    locked: !state.practiceDone,
+    lockedMsg: 'Finish Practice first to unlock Game 1.',
+    onClick: () => openGame(g1.id),
+  }));
+  // Game 2
+  const g2 = state.games.find(g => g.slot === 'game2');
+  tiles.appendChild(makeTile({
+    label: g2 ? g2.name : 'Me vs. the Class',
+    sub: 'Game 2 · Compare with your classmates',
+    ico:'🏆',
+    badge: 'Game 2',
+    locked: !state.game1Done,
+    lockedMsg: 'Play Game 1 at least once to unlock Game 2.',
+    onClick: () => openGame(g2.id),
+  }));
+  // Custom games (teacher-created), all unlocked once Game 1 is done
+  for (const g of state.games.filter(g => g.slot === 'custom')) {
+    tiles.appendChild(makeTile({
+      label: g.name, sub: `${g.duration_minutes} min · custom game`, ico:'🎯',
+      badge:'Custom',
+      locked: !state.game1Done,
+      lockedMsg: 'Play Game 1 first to unlock custom games.',
+      onClick: () => openGame(g.id),
+    }));
+  }
+}
+function makeTile({label, sub, ico, badge, done, locked, lockedMsg, onClick}) {
+  const el = document.createElement('div');
+  el.className = 'tile' + (done?' done':'') + (locked?' locked':'');
+  el.innerHTML = `<span class="ico">${ico}</span>
+                  <span class="label">${escapeHtml(label)}</span>
+                  <span class="sub">${escapeHtml(sub||'')}</span>
+                  <span class="badge">${escapeHtml(badge||'')}</span>`;
+  el.onclick = () => {
+    if (locked) { $('lock-msg').textContent = '🔒 ' + (lockedMsg||'Locked'); return; }
+    onClick();
+  };
+  return el;
+}
+
+function openPractice() {
+  // Mark as done immediately on open — the practice itself is the existing geometry-quiz
+  // page. We treat "opened practice" as completion to keep things simple for kids.
+  if (state.studentId) DB.markCompleted(state.studentId, 'practice');
+  // Send them to the practice page; back-button returns here.
+  window.location.href = 'geometry-quiz.html?from=student';
+}
+function openGame(gameId) {
+  if (!gameId) return;
+  // Pass student + game ids to the game page via query string
+  const q = new URLSearchParams({ student: state.studentId, game: gameId });
+  window.location.href = 'game.html?' + q.toString();
+}
+function signOut() {
+  state.studentId = null; state.studentName = null; state.gender = null;
+  clearSession(); updateWhoStrip();
+  showScreen('screen-gender');
+}
+
+function escapeHtml(s) { return (s||'').toString().replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+
+// ---------- boot ----------
+(async () => {
+  TTS.loadVoices(); // warm up voices list
+  const sess = loadSession();
+  if (sess && sess.id) {
+    // Try to resume that student
+    state.students = await DB.listStudents();
+    const found = state.students.find(s => s.id === sess.id);
+    if (found) {
+      state.gender = found.gender; state.studentId = found.id; state.studentName = found.name;
+      state.practiceDone = await DB.hasCompleted(found.id, 'practice');
+      state.game1Done    = await DB.hasCompleted(found.id, 'game1');
+      state.games        = await DB.listGames();
+      updateWhoStrip();
+      await renderPage2();
+      showScreen('screen-page2');
+      return;
+    }
+  }
+  showScreen('screen-gender');
+})();
+</script>
+</body>
+</html>
