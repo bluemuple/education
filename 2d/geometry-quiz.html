@@ -236,6 +236,13 @@
 </head>
 <body>
 <div class="wrap">
+  <a id="back-to-game" href="student.html" style="display:none; text-decoration:none; font-weight:900; color:#a84a00; padding:8px 14px; border:3px solid #1d1d24; border-radius:14px; background:#fff; box-shadow:0 4px 0 rgba(0,0,0,0.12); margin-bottom:12px; align-self:flex-start; width:fit-content;">← Back to Maths Game</a>
+  <script>
+    // Show "back to maths game" link only when launched from the student app
+    if (new URLSearchParams(location.search).get('from') === 'student') {
+      document.getElementById('back-to-game').style.display = 'inline-block';
+    }
+  </script>
   <header class="bar">
     <div class="title">📐 2D Shapes Quiz</div>
     <div class="stats">
