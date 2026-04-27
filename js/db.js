@@ -73,8 +73,12 @@
   // Extra slots: 'custom' (added by teacher via "New Game" button).
   // We always keep one row per built-in slot; teachers just edit duration & name.
   const DEFAULT_GAMES = [
-    { slot:'game1', name:'Yesterday Me vs. Today Me', duration_minutes:2 },
-    { slot:'game2', name:'Me vs. the Class',           duration_minutes:2 },
+    { slot:'game1',    name:'Yesterday Me vs. Today Me', duration_minutes:2 },
+    { slot:'game2',    name:'Me vs. the Class',           duration_minutes:2 },
+    // 'practice' is a virtual slot used only as a foreign-key target for
+    // recording per-student practice scores. It is filtered out of the
+    // teacher's Games tab and the student's Page 2 tiles.
+    { slot:'practice', name:'Practice',                    duration_minutes:0 },
   ];
   async function listGames() {
     if (useSupabase) {

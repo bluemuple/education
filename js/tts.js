@@ -14,20 +14,29 @@
   function pickVoice(voices, opts={}) {
     const wantFemale = opts.gender !== 'male';
     if (!voices || !voices.length) return null;
-    const femaleNames = /(female|sonia|libby|hollie|olivia|amy|emma|maisie|abby|ada|jenny|aria|emily|natasha|molly|isla)/i;
-    const maleNames   = /(male|ryan|thomas|brian|guy|william|connor|mitchell|liam)/i;
-    const matchGender = (n) => wantFemale ? femaleNames.test(n) : maleNames.test(n);
-    // 1) en-GB + matching gender
-    let v = voices.find(x => /en[-_]GB/i.test(x.lang) && matchGender(x.name)); if (v) return v;
-    // 2) any en-GB
-    v = voices.find(x => /en[-_]GB/i.test(x.lang)); if (v) return v;
-    // 3) en-NZ then en-AU + matching gender
-    v = voices.find(x => /en[-_]NZ/i.test(x.lang) && matchGender(x.name)); if (v) return v;
-    v = voices.find(x => /en[-_]NZ/i.test(x.lang)); if (v) return v;
-    v = voices.find(x => /en[-_]AU/i.test(x.lang) && matchGender(x.name)); if (v) return v;
-    v = voices.find(x => /en[-_]AU/i.test(x.lang)); if (v) return v;
-    // 4) any English
-    v = voices.find(x => /^en/i.test(x.lang)); return v || voices[0];
+    // Common female / male voice-name fragments across browsers + OSes
+    const femaleNames = /(female|woman|girl|sonia|libby|hollie|olivia|amy|emma|maisie|abby|ada|jenny|aria|emily|natasha|molly|isla|samantha|karen|tessa|fiona|moira|veena|kate|serena|allison|joanna|salli|kimberly|kendra|ivy|nicole|mia|aoife|catherine|monica|paulina|francisca|laura)/i;
+    const maleNames   = /(male\b|man|boy|ryan|thomas|brian|guy|william|connor|mitchell|liam|david|alex|daniel|mark|fred|jorge|diego|matthew|joey|justin|kevin|russell|aaron|reed)/i;
+    const isFemale = (n) => femaleNames.test(n) && !maleNames.test(n);
+    const isMale   = (n) => maleNames.test(n)   && !femaleNames.test(n);
+    const matchGender = (n) => wantFemale ? isFemale(n) : isMale(n);
+
+    // PASS 1 — locale-by-locale, gender-matched voices (prefer en-GB → en-NZ → en-AU → any en)
+    const localePrefs = [/en[-_]GB/i, /en[-_]NZ/i, /en[-_]AU/i, /^en/i];
+    for (const re of localePrefs) {
+      const v = voices.find(x => re.test(x.lang) && matchGender(x.name));
+      if (v) return v;
+    }
+    // PASS 2 — any English voice with matching gender (catches non-standard names)
+    let v = voices.find(x => /^en/i.test(x.lang) && matchGender(x.name));
+    if (v) return v;
+    // PASS 3 — any English voice that is NOT clearly the OPPOSITE gender
+    const oppositeIs = wantFemale ? isMale : isFemale;
+    v = voices.find(x => /^en/i.test(x.lang) && !oppositeIs(x.name));
+    if (v) return v;
+    // PASS 4 — fall back to any English voice, then anything
+    v = voices.find(x => /^en/i.test(x.lang));
+    return v || voices[0];
   }
 
   let lastUtter = null;
