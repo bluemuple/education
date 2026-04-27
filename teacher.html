@@ -266,7 +266,7 @@ async function refreshStudents() {
     const tr = document.createElement('tr');
     const count = deviceCounts[s.id] || 0;
     let badge = '';
-    if (count > 2) {
+    if (count > 1) {
       badge = ` <span class="dev-badge" title="This name has been used on ${count} different devices/browsers">⚠ ${count} devices</span>`;
     }
     tr.innerHTML = `
