@@ -271,7 +271,7 @@
     <div class="tts-char-row">
       <div class="tts-char kuromi" id="kuromi-char">
         <span class="char-name">Kuromi</span>
-        <img id="kuromi-img" src="kuromi.gif" alt="Kuromi" />
+        <img id="kuromi-img" src="2d/kuromi.gif" alt="Kuromi" />
         <span class="char-tap-hint">👆 tap to hear!</span>
       </div>
     </div>
@@ -301,7 +301,7 @@
     <div class="tts-char-row">
       <div class="tts-char mymelody" id="melody-char">
         <span class="char-name">My Melody</span>
-        <img id="melody-img" src="mymelody.gif" alt="My Melody" />
+        <img id="melody-img" src="2d/mymelody.gif" alt="My Melody" />
         <span class="char-tap-hint">👆 tap to hear!</span>
       </div>
     </div>
@@ -313,7 +313,7 @@
   <!-- Charlie celebration screen (shown just before the end/review screen) -->
   <section id="screen-charlie" class="card hidden" style="text-align:center; background:#fff4fb;">
     <div id="charlie-char-wrap" style="display:inline-block; cursor:pointer; border:4px solid var(--ink); border-radius:24px; background:#fff; padding:12px; box-shadow:0 6px 0 rgba(0,0,0,0.18);">
-      <img id="charlie-img" src="charlie_phone.gif" alt="Charlie is calling" style="display:block; width:300px; height:auto; max-height:360px; border-radius:16px; object-fit:contain;" />
+      <img id="charlie-img" src="2d/charlie_phone.gif" alt="Charlie is calling" style="display:block; width:300px; height:auto; max-height:360px; border-radius:16px; object-fit:contain;" />
     </div>
     <p id="charlie-hint" style="margin-top:22px; font-weight:800; font-size:18px; color: var(--primary-ink);">📞 Charlie is calling! Tap the picture to answer.</p>
     <div class="btn-row" style="justify-content:center; margin-top: 22px;">
@@ -328,13 +328,14 @@
     <div class="big-score" id="end-score">0 / 0</div>
     <p id="end-final-level" style="font-weight:800;">Final level: 2</p>
     <div class="review-list" id="review-list"></div>
-    <div class="btn-row" style="justify-content:center;">
+    <div class="btn-row" style="justify-content:center; gap:12px; flex-wrap:wrap;">
       <button class="btn" id="btn-restart">Play again 🔁</button>
+      <button class="btn good hidden" id="btn-go-game1">Continue to Game 1 ➜</button>
     </div>
   </section>
 </div>
 
-<audio id="a-click" src="click.mp3" preload="auto"></audio>
+<audio id="a-click" src="2d/click.mp3" preload="auto"></audio>
 <audio id="a-reward" preload="auto"></audio>
 
 <script>
@@ -771,7 +772,59 @@ const QUESTIONS = [
     answer:1,
     explain:'A regular pentagon has 5 equal sides and 5 equal angles. The other statements are not true.'
   },
+
+  // -------- Type-the-name (short answer) questions --------
+  { id:'sa1', level:1, topic:'shape-name',
+    text:'Type the name of this shape.',
+    shape:'square', type:'sa',
+    answer:'square', accept:[],
+    explain:'A square has 4 equal sides and 4 right angles.' },
+  { id:'sa2', level:1, topic:'shape-name',
+    text:'Type the name of this shape.',
+    shape:'triangle', type:'sa',
+    answer:'triangle', accept:['equilateral triangle'],
+    explain:'A triangle has 3 sides and 3 corners.' },
+  { id:'sa3', level:1, topic:'shape-name',
+    text:'Type the name of this shape.',
+    shape:'circle', type:'sa',
+    answer:'circle', accept:[],
+    explain:'A circle is round with no straight sides or corners.' },
+  { id:'sa4', level:2, topic:'shape-name',
+    text:'Type the name of this shape.',
+    shape:'rectangle', type:'sa',
+    answer:'rectangle', accept:[],
+    explain:'A rectangle has 4 right angles and opposite sides are equal.' },
+  { id:'sa5', level:2, topic:'shape-name',
+    text:'Type the name of this shape.',
+    shape:'regPentagon', type:'sa',
+    answer:'pentagon', accept:['regular pentagon'],
+    explain:'A pentagon has 5 sides. This one has all equal sides, so it is a regular pentagon.' },
+  { id:'sa6', level:2, topic:'shape-name',
+    text:'Type the name of this shape.',
+    shape:'regHexagon', type:'sa',
+    answer:'hexagon', accept:['regular hexagon'],
+    explain:'A hexagon has 6 sides. This one is regular because all sides and angles are equal.' },
+  { id:'sa7', level:3, topic:'shape-name',
+    text:'Type the name of this shape.',
+    shape:'parallelogram', type:'sa',
+    answer:'parallelogram', accept:[],
+    explain:'A parallelogram has 2 pairs of parallel sides but its corners are not right angles.' },
+  { id:'sa8', level:3, topic:'shape-name',
+    text:'Type the name of this shape.',
+    shape:'trapezium', type:'sa',
+    answer:'trapezium', accept:['trapezoid'],
+    explain:'A trapezium has exactly 1 pair of parallel sides.' },
 ];
+
+// Case-insensitive comparator for short-answer questions
+function _normSA(s){ return (s||'').toString().trim().toLowerCase().replace(/\s+/g,' '); }
+function checkSAPractice(q, given){
+  const g = _normSA(given);
+  if (!g) return false;
+  if (g === _normSA(q.answer)) return true;
+  if (Array.isArray(q.accept)) for (const a of q.accept) if (g === _normSA(a)) return true;
+  return false;
+}
 
 // ====================== CONCEPT EXPLAINERS ======================
 const CONCEPTS = {
@@ -894,7 +947,7 @@ function playClick() {
 }
 function playReward(name) {
   try {
-    aReward.src = name + '.mp3';
+    aReward.src = '2d/' + name + '.mp3';
     aReward.currentTime = 0;
     aReward.play();
   } catch(e){}
@@ -949,7 +1002,7 @@ function renderQuestion() {
 
   el('q-text').textContent = q.text;
   // Question text → William reads it on click
-  el('q-text').onclick = () => playWilliam('tts/q_' + q.id + '_q.mp3', el('q-text'));
+  el('q-text').onclick = () => playWilliam('2d/tts/q_' + q.id + '_q.mp3', el('q-text'));
 
   el('q-shape').innerHTML = q.shape ? SHAPES[q.shape] : '';
   const opts = el('q-options');
@@ -964,11 +1017,11 @@ function renderQuestion() {
       b.dataset.idx = idx;
       b.onclick = () => {
         selectOption(b, idx);
-        playWilliam('tts/q_' + q.id + '_o' + idx + '.mp3', b);
+        playWilliam('2d/tts/q_' + q.id + '_o' + idx + '.mp3', b);
       };
       opts.appendChild(b);
     });
-  } else { // yn
+  } else if (q.type === 'yn') {
     ['yes','no'].forEach((v) => {
       const b = document.createElement('div');
       b.className = 'opt';
@@ -976,10 +1029,31 @@ function renderQuestion() {
       b.dataset.val = v;
       b.onclick = () => {
         selectOption(b, v);
-        playWilliam('tts/opt_' + v + '.mp3', b);
+        playWilliam('2d/tts/opt_' + v + '.mp3', b);
       };
       opts.appendChild(b);
     });
+  } else if (q.type === 'sa') {
+    // Short-answer input
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex; gap:8px; width:100%;';
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.id = 'sa-input';
+    inp.autocomplete = 'off';
+    inp.spellcheck = false;
+    inp.placeholder = 'Type your answer here…';
+    inp.style.cssText = 'flex:1; border:3px solid var(--ink); border-radius:14px; padding:12px 14px; font-size:18px; font-weight:800; background:#fff8e8;';
+    inp.oninput = () => {
+      state.selected = inp.value;
+      el('btn-submit').disabled = !inp.value.trim();
+    };
+    inp.onkeydown = (e) => {
+      if (e.key === 'Enter' && !el('btn-submit').disabled) submitAnswer();
+    };
+    wrap.appendChild(inp);
+    opts.appendChild(wrap);
+    setTimeout(() => inp.focus(), 60);
   }
   el('btn-submit').disabled = true;
   showScreen('screen-question');
@@ -994,37 +1068,41 @@ function selectOption(node, value) {
 }
 
 function submitAnswer() {
-  if (state.selected === null || state.selected === undefined) return;
+  if (state.selected === null || state.selected === undefined || state.selected === '') return;
   const q = state.currentQ;
   let isCorrect = false;
-  if (q.type === 'mc') isCorrect = (state.selected === q.answer);
-  else isCorrect = (state.selected === q.answer);
+  if (q.type === 'mc')      isCorrect = (state.selected === q.answer);
+  else if (q.type === 'yn') isCorrect = (state.selected === q.answer);
+  else if (q.type === 'sa') isCorrect = checkSAPractice(q, state.selected);
+
+  // Pre-compute display labels
+  let givenLabel, correctLabel;
+  if (q.type === 'mc')      { givenLabel = q.options[state.selected]; correctLabel = q.options[q.answer]; }
+  else if (q.type === 'yn') { givenLabel = state.selected === 'yes' ? 'Yes' : 'No'; correctLabel = q.answer === 'yes' ? 'Yes' : 'No'; }
+  else                      { givenLabel = (state.selected||'').toString(); correctLabel = q.answer; }
 
   state.wasCorrect = isCorrect;
   state.qCount++;
   state.history.push({
-    id: q.id,
-    text: q.text,
-    correct: isCorrect,
-    givenLabel: q.type === 'mc' ? q.options[state.selected] : (state.selected === 'yes' ? 'Yes' : 'No'),
-    correctLabel: q.type === 'mc' ? q.options[q.answer] : (q.answer === 'yes' ? 'Yes' : 'No'),
-    explain: q.explain,
-    level: q.level,
-    topic: q.topic,
+    id: q.id, text: q.text, correct: isCorrect,
+    givenLabel, correctLabel,
+    explain: q.explain, level: q.level, topic: q.topic,
   });
 
-  // Mark options
+  // Mark options (only for mc/yn; sa input gets disabled too)
   document.querySelectorAll('.opt').forEach(o => {
     o.classList.add('disabled');
     const idx = o.dataset.idx !== undefined ? Number(o.dataset.idx) : o.dataset.val;
     if (q.type === 'mc') {
       if (Number(idx) === q.answer) o.classList.add('correct');
       if (Number(idx) === state.selected && !isCorrect) o.classList.add('wrong');
-    } else {
+    } else if (q.type === 'yn') {
       if (idx === q.answer) o.classList.add('correct');
       if (idx === state.selected && !isCorrect) o.classList.add('wrong');
     }
   });
+  const saInput = document.getElementById('sa-input');
+  if (saInput) saInput.disabled = true;
 
   if (isCorrect) {
     state.correct++;
@@ -1041,11 +1119,10 @@ function submitAnswer() {
   // Show result screen (feedback + explanation + Next)
   const fb = el('result-feedback');
   if (isCorrect) {
-    fb.textContent = '✅ Correct! ' + (q.type === 'mc' ? q.options[q.answer] : (q.answer==='yes'?'Yes':'No'));
+    fb.textContent = '✅ Correct! ' + correctLabel;
     fb.className = 'feedback good';
   } else {
-    const cl = q.type === 'mc' ? q.options[q.answer] : (q.answer==='yes'?'Yes':'No');
-    fb.textContent = '❌ Not quite. The correct answer is: ' + cl;
+    fb.textContent = '❌ Not quite. The correct answer is: ' + correctLabel;
     fb.className = 'feedback bad';
   }
   el('result-explain').innerHTML = '<b>Why?</b> ' + q.explain;
@@ -1054,7 +1131,7 @@ function submitAnswer() {
   renderShapePreview('result-shape-preview', q.shape ? [{ shape: q.shape, caption: '' }] : []);
 
   // Prime Kuromi's audio for this question's explanation
-  CHARS.kuromi.audioSrc = 'tts/q_' + q.id + '.mp3';
+  CHARS.kuromi.audioSrc = '2d/tts/q_' + q.id + '.mp3';
 
   // Do NOT hide question/shape — show result inline by flipping to screen-result
   showScreen('screen-result');
@@ -1087,8 +1164,8 @@ function nextAfterResult() {
 function showReward() {
   const pair = REWARD_PAIRS[Math.floor(Math.random() * REWARD_PAIRS.length)];
   const img = el('reward-img');
-  img.src = pair + '.jpg';
-  img.onerror = () => { img.src = pair + '.JPG'; };
+  img.src = '2d/' + pair + '.jpg';
+  img.onerror = () => { img.src = '2d/' + pair + '.JPG'; };
   el('reward-title').textContent = PRAISES[Math.floor(Math.random() * PRAISES.length)];
   el('reward-sub').textContent = PRAISE_SUBS[Math.floor(Math.random() * PRAISE_SUBS.length)] + '  (tap the picture!)';
   el('reward-img-wrap').onclick = () => playReward(pair);
@@ -1101,7 +1178,7 @@ function showConcept(topic) {
   el('concept-body').innerHTML = c.body;
   renderShapePreview('concept-shape-preview', CONCEPT_SHAPES[topic] || []);
   // Prime My Melody's audio for this concept
-  CHARS.melody.audioSrc = 'tts/concept_' + topic + '.mp3';
+  CHARS.melody.audioSrc = '2d/tts/concept_' + topic + '.mp3';
   showScreen('screen-concept');
 }
 
@@ -1127,7 +1204,7 @@ let charlieEndMsg = '';
 function showCharlie(endMsg) {
   charlieEndMsg = endMsg;
   // Reset to phone gif, hide Next button
-  el('charlie-img').src = 'charlie_phone.gif?t=' + Date.now();
+  el('charlie-img').src = '2d/charlie_phone.gif?t=' + Date.now();
   el('btn-charlie-next').classList.add('hidden');
   el('charlie-hint').textContent = '📞 Charlie is calling! Tap the picture to answer.';
   showScreen('screen-charlie');
@@ -1138,9 +1215,9 @@ el('charlie-char-wrap').addEventListener('click', () => {
   if (charliePlaying) return;
   charliePlaying = true;
   const tier = pickCharlieTier();
-  const src = 'charlie_' + tier + '.mp3';
+  const src = '2d/charlie_' + tier + '.mp3';
   // Swap to animated Charlie
-  el('charlie-img').src = 'charlie.gif?t=' + Date.now();
+  el('charlie-img').src = '2d/charlie.gif?t=' + Date.now();
   el('charlie-hint').textContent = '🎧 Charlie is talking…';
   const a = new Audio(src);
   const done = () => {
@@ -1183,11 +1260,18 @@ function showEnd(msg) {
       reviewList.appendChild(d);
     });
   }
+  // Show "Continue to Game 1" only when launched from the student app
+  const fromStudent = (new URLSearchParams(location.search).get('from') === 'student');
+  el('btn-go-game1').classList.toggle('hidden', !fromStudent);
   showScreen('screen-end');
 }
 
 // ====================== WIRE UP ======================
 el('btn-submit').onclick = submitAnswer;
+el('btn-go-game1').onclick = () => {
+  // Send back to student app with a request to auto-launch Game 1
+  location.href = 'student.html?go=game1';
+};
 el('btn-next').onclick = nextAfterResult;
 el('btn-reward-next').onclick = goToNextQuestion;
 el('btn-concept-next').onclick = () => {
@@ -1202,15 +1286,15 @@ el('btn-concept-next').onclick = () => {
 
 const CHARS = {
   melody: {
-    idle:    'mymelody.gif',
-    talking: 'explain.gif',
+    idle:    '2d/mymelody.gif',
+    talking: '2d/explain.gif',
     img:  () => el('melody-img'),
     wrap: () => el('melody-char'),
     audioSrc: null,
   },
   kuromi: {
-    idle:    'kuromi.gif',
-    talking: 'speaking.gif',
+    idle:    '2d/kuromi.gif',
+    talking: '2d/speaking.gif',
     img:  () => el('kuromi-img'),
     wrap: () => el('kuromi-char'),
     audioSrc: null,
