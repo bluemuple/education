@@ -290,7 +290,10 @@ async function renderPage2() {
       badge:'Custom',
       locked: !state.game1Done,
       lockedMsg: 'Play Game 1 first to unlock custom games.',
-      onClick: () => openGame(g.id),
+      onClick: () => {
+        if (state.game1Done) showRanking('custom', g);
+        else openGame(g.id);
+      },
     }));
   }
 }
@@ -347,8 +350,10 @@ async function showRanking(slot, game) {
       });
       content.appendChild(tbl);
     }
-  } else { // game2 (or any class-wide ranking)
-    $('rank-sub').textContent = 'Class ranking — best score per student';
+  } else { // game2 or custom — class-wide ranking
+    $('rank-sub').textContent = (slot === 'custom')
+      ? 'Class ranking for this game — best score per student'
+      : 'Class ranking — best score per student';
     const [allScores, students] = await Promise.all([DB.listScores(), DB.listStudents()]);
     const stuById = Object.fromEntries(students.map(s => [s.id, s]));
     const best = {};

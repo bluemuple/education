@@ -1070,11 +1070,17 @@ function renderQuestion() {
       hintBtn.title = 'Shows the answer — you will see this question again later.';
       hintBtn.onclick = () => {
         state.hintUsed = true;
-        inp.value = q.answer;
-        state.selected = inp.value;
-        el('btn-submit').disabled = false;
+        // Show the answer outside the input — student types it themselves while looking
+        let hintBox = document.getElementById('sa-hint-box');
+        if (!hintBox) {
+          hintBox = document.createElement('div');
+          hintBox.id = 'sa-hint-box';
+          hintBox.style.cssText = 'flex-basis:100%; width:100%; margin-top:6px; padding:10px 14px; background:#fff7dc; border:3px dashed #1e1e24; border-radius:12px; font-weight:800; font-size:18px;';
+          wrap.appendChild(hintBox);
+        }
+        hintBox.innerHTML = '💡 Hint: <span style="color:#a84a00;">' + q.answer + '</span> &nbsp;<span style="font-size:13px; font-weight:700; color:#6a6a72;">— now type it in the box.</span>';
         hintBtn.disabled = true;
-        hintBtn.textContent = '💡 Hint used — try again later';
+        hintBtn.textContent = '💡 Hint shown — try again later';
         inp.focus();
       };
       wrap.appendChild(hintBtn);
@@ -1288,8 +1294,20 @@ el('charlie-char-wrap').addEventListener('click', () => {
   el('charlie-img').src = '2d/charlie.gif?t=' + Date.now();
   el('charlie-hint').textContent = '🎧 Charlie is talking…';
   const a = new Audio(src);
+  const freezeCharlie = () => {
+    // Freeze the animated gif by snapshotting the current frame to a canvas
+    const cimg = el('charlie-img');
+    try {
+      const cv = document.createElement('canvas');
+      cv.width  = cimg.naturalWidth  || cimg.width  || 300;
+      cv.height = cimg.naturalHeight || cimg.height || 300;
+      cv.getContext('2d').drawImage(cimg, 0, 0);
+      cimg.src = cv.toDataURL('image/png');
+    } catch(e) { /* tainted-canvas or older browser — leave gif as-is */ }
+  };
   const done = () => {
     charliePlaying = false;
+    freezeCharlie();
     el('btn-charlie-next').classList.remove('hidden');
     el('charlie-hint').textContent = '👉 Tap "See my results" when you\'re ready.';
   };

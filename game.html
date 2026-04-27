@@ -116,6 +116,12 @@
 
   .hidden { display:none !important; }
 
+  /* Click-to-read affordances */
+  .clickable-tts { cursor:pointer; position:relative; }
+  .clickable-tts:hover { color: var(--primary-ink); }
+  .clickable-tts::after { content:" 🔊"; font-size:0.7em; opacity:0.55; }
+  .opt.speaking { outline:4px dashed var(--primary); outline-offset:2px; }
+
   /* Shape SVG fills (loaded from shapes.js) */
 </style>
 </head>
@@ -142,7 +148,7 @@
       <span class="level-pill" id="lvl-pill">Level —</span>
       <span style="font-weight:800; font-size:13px; color:var(--muted);">Q <span id="q-num">1</span></span>
     </div>
-    <p class="q-text" id="q-text">…</p>
+    <p class="q-text clickable-tts" id="q-text" title="Tap to hear">…</p>
     <div class="q-shape" id="q-shape"></div>
     <div class="options" id="q-options"></div>
     <div class="sa-row hidden" id="sa-row">
@@ -179,6 +185,10 @@
     </div>
   </section>
 </div>
+
+<audio id="a-click"  src="2d/click.mp3" preload="auto"></audio>
+<audio id="a-tts"    preload="auto"></audio>
+<audio id="a-reward" preload="auto"></audio>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase-config.js"></script>
@@ -278,6 +288,43 @@ function nextQuestion() {
   renderQuestion();
 }
 
+// ---------------------- AUDIO HELPERS ----------------------
+const aClick  = $('a-click');
+const aTts    = $('a-tts');
+const aReward = $('a-reward');
+const REWARD_POOL = [
+  '2d/sarang.mp3','2d/You_got_it.mp3','2d/tamil.mp3',
+  '2d/kapai.mp3','2d/welldone.mp3','2d/mahal.mp3',
+];
+function playClick() {
+  try { aClick.currentTime = 0; aClick.play(); } catch(e){}
+}
+function playReward() {
+  try {
+    aReward.src = REWARD_POOL[Math.floor(Math.random() * REWARD_POOL.length)];
+    aReward.currentTime = 0;
+    aReward.play();
+  } catch(e){}
+}
+let _ttsHi = null;
+function stopTTS() {
+  try { aTts.pause(); } catch(e){}
+  if (_ttsHi) { _ttsHi.classList.remove('speaking'); _ttsHi = null; }
+}
+function playTTS(src, hiEl) {
+  stopTTS();
+  try {
+    aTts.src = src;
+    aTts.currentTime = 0;
+    aTts.play().catch(()=>{});
+    if (hiEl) { hiEl.classList.add('speaking'); _ttsHi = hiEl; }
+    aTts.onended = aTts.onerror = () => {
+      if (hiEl) hiEl.classList.remove('speaking');
+      if (_ttsHi === hiEl) _ttsHi = null;
+    };
+  } catch(e){}
+}
+
 function renderQuestion() {
   const q = state.currentQ;
   $('q-num').textContent = state.qNum;
@@ -285,6 +332,8 @@ function renderQuestion() {
   pill.className = 'level-pill l' + q.level;
   pill.textContent = `Level ${q.level} · ${window.LEVEL_POINTS[q.level]} pts`;
   $('q-text').textContent = q.text;
+  // Click question text → William reads it
+  $('q-text').onclick = () => playTTS('2d/tts/q_' + q.id + '_q.mp3', $('q-text'));
   $('q-shape').innerHTML = q.shape ? (window.SHAPES[q.shape] || '') : '';
   $('q-feedback').classList.add('hidden');
   $('btn-next').classList.add('hidden');
@@ -301,7 +350,11 @@ function renderQuestion() {
       b.className = 'opt';
       b.textContent = label;
       b.dataset.idx = idx;
-      b.onclick = () => selectOption(b, idx);
+      b.onclick = () => {
+        playClick();                                 // click sound
+        selectOption(b, idx);
+        playTTS('2d/tts/q_' + q.id + '_o' + idx + '.mp3', b);
+      };
       opts.appendChild(b);
     });
   } else { // sa
@@ -334,6 +387,10 @@ function submitAnswer() {
   } else {
     correct = window.checkSA(q, state.selected);
   }
+  // Click sound on Submit, then a random reward sound if they got it right
+  playClick();
+  stopTTS();
+  if (correct) setTimeout(playReward, 180);  // tiny gap so click + reward don't crash
 
   // disable + colour options
   document.querySelectorAll('.opt').forEach(o => {
