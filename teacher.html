@@ -88,6 +88,9 @@
   .stats-pills .p { background:#fff; border:2px solid var(--ink);
                     border-radius:999px; padding:4px 12px; font-weight:800; font-size:13px; }
   .top3 td { background:var(--pink-bg) !important; font-weight:900; color:var(--pink-ink); }
+  .dev-badge { display:inline-block; padding:2px 9px; margin-left:6px;
+               background:#ffd1d1; color:#8a1e1e; border:2px solid #8a1e1e;
+               border-radius:999px; font-size:11px; font-weight:900; vertical-align:middle; }
 
   @media (max-width:760px) {
     .layout { flex-direction:column; }
@@ -255,13 +258,19 @@ $('stu-reset').onclick   = wipeAllStudentData;
 $('stats-reset').onclick = wipeAllStudentData;
 async function refreshStudents() {
   _students = await DB.listStudents();
+  const deviceCounts = (DB.listDeviceCounts ? await DB.listDeviceCounts() : {}) || {};
   const tbody = $('stu-rows'); tbody.innerHTML = '';
   $('stu-empty').classList.toggle('hidden', _students.length > 0);
   _students.sort((a,b) => a.name.localeCompare(b.name));
   for (const s of _students) {
     const tr = document.createElement('tr');
+    const count = deviceCounts[s.id] || 0;
+    let badge = '';
+    if (count > 2) {
+      badge = ` <span class="dev-badge" title="This name has been used on ${count} different devices/browsers">⚠ ${count} devices</span>`;
+    }
     tr.innerHTML = `
-      <td><b>${escapeHtml(s.name)}</b></td>
+      <td><b>${escapeHtml(s.name)}</b>${badge}</td>
       <td>${s.gender === 'boy' ? '👦 Boy' : '👧 Girl'}</td>
       <td style="text-align:right;"><button class="btn small danger">Delete</button></td>`;
     tr.querySelector('button').onclick = async () => {

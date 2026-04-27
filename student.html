@@ -231,6 +231,9 @@ function askConfirm(s) {
 $('confirm-yes').onclick = async () => {
   // pull completion status, save session, show page 2
   saveSession();
+  // Record this browser/device against the chosen student so the teacher can
+  // see if the same name is being used on too many devices.
+  if (DB.recordStudentLogin) DB.recordStudentLogin(state.studentId);
   state.practiceDone = await DB.hasCompleted(state.studentId, 'practice');
   state.game1Done    = await DB.hasCompleted(state.studentId, 'game1');
   state.games        = await DB.listGames();
