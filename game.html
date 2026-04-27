@@ -171,9 +171,10 @@
       <table class="tbl"><thead><tr><th>Rank</th><th>Student</th><th>Best score</th><th>When</th></tr></thead><tbody id="class-rank-rows"></tbody></table>
     </div>
 
-    <div class="btn-row" style="justify-content:center;">
+    <div class="btn-row" style="justify-content:center; gap:12px; flex-wrap:wrap;">
       <button class="btn secondary" id="btn-home">← Back to menu</button>
       <button class="btn" id="btn-replay">Play again 🔁</button>
+      <button class="btn good hidden" id="btn-go-game2">Continue to Game 2 ➜</button>
     </div>
   </section>
 </div>
@@ -416,6 +417,19 @@ async function finish() {
       rows.appendChild(tr);
     });
     $('class-rank').classList.remove('hidden');
+  }
+
+  // Show "Continue to Game 2" button only after finishing Game 1
+  if (game.slot === 'game1') {
+    const games = await DB.listGames();
+    const g2 = games.find(g => g.slot === 'game2');
+    if (g2) {
+      $('btn-go-game2').classList.remove('hidden');
+      $('btn-go-game2').onclick = () => {
+        const q = new URLSearchParams({ student: STUDENT_ID, game: g2.id });
+        location.href = 'game.html?' + q.toString();
+      };
+    }
   }
 
   $('screen-q').classList.add('hidden');

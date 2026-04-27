@@ -306,6 +306,7 @@ function escapeHtml(s) { return (s||'').toString().replace(/[&<>"']/g, c => ({ '
 (async () => {
   TTS.loadVoices(); // warm up voices list
   const sess = loadSession();
+  const goParam = new URLSearchParams(location.search).get('go'); // e.g. 'game1' or 'game2'
   if (sess && sess.id) {
     // Try to resume that student
     state.students = await DB.listStudents();
@@ -316,6 +317,15 @@ function escapeHtml(s) { return (s||'').toString().replace(/[&<>"']/g, c => ({ '
       state.game1Done    = await DB.hasCompleted(found.id, 'game1');
       state.games        = await DB.listGames();
       updateWhoStrip();
+      // ?go=game1 (or game2) → auto-launch that game if it's unlocked
+      if (goParam === 'game1' && state.practiceDone) {
+        const g1 = state.games.find(g => g.slot === 'game1');
+        if (g1) { openGame(g1.id); return; }
+      }
+      if (goParam === 'game2' && state.game1Done) {
+        const g2 = state.games.find(g => g.slot === 'game2');
+        if (g2) { openGame(g2.id); return; }
+      }
       await renderPage2();
       showScreen('screen-page2');
       return;
