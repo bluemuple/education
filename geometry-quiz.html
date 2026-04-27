@@ -235,6 +235,9 @@
 </style>
 </head>
 <body>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-config.js"></script>
+<script src="js/db.js"></script>
 <div class="wrap">
   <a id="back-to-game" href="student.html" style="display:inline-block; text-decoration:none; font-weight:900; color:#a84a00; padding:8px 14px; border:3px solid #1d1d24; border-radius:14px; background:#fff; box-shadow:0 4px 0 rgba(0,0,0,0.12); margin-bottom:12px; align-self:flex-start; width:fit-content;">🏠 Back to menu</a>
   <header class="bar">
@@ -1282,6 +1285,26 @@ function showCharlie(endMsg) {
   el('btn-charlie-next').classList.add('hidden');
   el('charlie-hint').textContent = '📞 Charlie is calling! Tap the picture to answer.';
   showScreen('screen-charlie');
+  // Record this practice round to the database (if launched from the student app)
+  recordPracticeScore();
+}
+
+// Save the practice result against the hidden "practice" game so the teacher
+// can review it from the Statistics tab. Only fires once per round.
+let _practiceRecorded = false;
+async function recordPracticeScore() {
+  if (_practiceRecorded) return;
+  _practiceRecorded = true;
+  try {
+    const studentId = new URLSearchParams(location.search).get('student');
+    if (!studentId || !window.DB) return;
+    const games = await DB.listGames();
+    const practiceGame = (games || []).find(g => g.slot === 'practice');
+    if (!practiceGame) return;
+    await DB.recordScore(studentId, practiceGame.id, state.correct);
+  } catch (err) {
+    console.warn('Could not record practice score:', err);
+  }
 }
 
 let charliePlaying = false;

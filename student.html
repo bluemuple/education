@@ -315,8 +315,10 @@ function openPractice() {
   // Mark as done immediately on open — the practice itself is the existing geometry-quiz
   // page. We treat "opened practice" as completion to keep things simple for kids.
   if (state.studentId) DB.markCompleted(state.studentId, 'practice');
-  // Send them to the practice page; back-button returns here.
-  window.location.href = 'geometry-quiz.html?from=student';
+  // Pass the student id so the practice page can record a score when it ends.
+  const params = new URLSearchParams({ from: 'student' });
+  if (state.studentId) params.set('student', state.studentId);
+  window.location.href = 'geometry-quiz.html?' + params.toString();
 }
 function openGame(gameId) {
   if (!gameId) return;

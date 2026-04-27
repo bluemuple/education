@@ -190,6 +190,12 @@
         <div id="stats-by-game"></div>
       </div>
 
+      <div class="card">
+        <h3 style="margin:0 0 10px;">Practice results</h3>
+        <p class="empty hidden" id="practice-empty">No practice rounds have been recorded yet.</p>
+        <div id="practice-by-student"></div>
+      </div>
+
       <div class="card" style="border-color:#e45858; background:#fff5f5;">
         <h3 style="margin:0 0 6px; color:#8a1e1e;">⚠️ Danger zone</h3>
         <p style="margin:0 0 10px; font-weight:700;">
@@ -271,10 +277,11 @@ async function refreshStudents() {
 async function refreshGames() {
   _games = await DB.listGames();
   const wrap = $('games-list'); wrap.innerHTML = '';
-  // Always show built-in slots first
+  // Always show built-in slots first; hide the internal "practice" slot
   const order = (g) => g.slot==='game1'?0 : g.slot==='game2'?1 : 2;
-  _games.sort((a,b) => order(a)-order(b));
-  for (const g of _games) {
+  const visibleGames = _games.filter(g => g.slot !== 'practice');
+  visibleGames.sort((a,b) => order(a)-order(b));
+  for (const g of visibleGames) {
     const card = document.createElement('div');
     card.className = 'game-card';
     const isBuiltIn = g.slot === 'game1' || g.slot === 'game2';
@@ -314,18 +321,23 @@ $('ng-add').onclick = async () => {
 // ---------- STATISTICS ----------
 async function refreshStats() {
   [_students, _games, _scores] = await Promise.all([DB.listStudents(), DB.listGames(), DB.listScores()]);
+  const practiceGame = _games.find(g => g.slot === 'practice');
+  const practiceId = practiceGame ? practiceGame.id : null;
+  const visibleGames = _games.filter(g => g.slot !== 'practice');
+  // Game scores only (exclude practice from the count + ranking sections)
+  const gameScores = _scores.filter(s => s.game_id !== practiceId);
   // Pills
   const pills = $('stats-pills');
   pills.innerHTML = `
     <span class="p">👧 Students: ${_students.length}</span>
-    <span class="p">🎮 Games: ${_games.length}</span>
-    <span class="p">📝 Scores recorded: ${_scores.length}</span>`;
-  // Recent
+    <span class="p">🎮 Games: ${visibleGames.length}</span>
+    <span class="p">📝 Game scores: ${gameScores.length}</span>`;
+  // Recent (game scores only, no practice)
   const tbody = $('stats-recent').querySelector('tbody'); tbody.innerHTML = '';
-  $('stats-recent-empty').classList.toggle('hidden', _scores.length > 0);
+  $('stats-recent-empty').classList.toggle('hidden', gameScores.length > 0);
   const stuById = Object.fromEntries(_students.map(s => [s.id, s]));
   const gameById = Object.fromEntries(_games.map(g => [g.id, g]));
-  const recent = [..._scores].sort((a,b) => (b.played_at||'').localeCompare(a.played_at||'')).slice(0, 30);
+  const recent = [...gameScores].sort((a,b) => (b.played_at||'').localeCompare(a.played_at||'')).slice(0, 30);
   for (const s of recent) {
     const tr = document.createElement('tr');
     const stu = stuById[s.student_id]; const g = gameById[s.game_id];
@@ -335,15 +347,17 @@ async function refreshStats() {
                     <td><b>${s.score}</b></td>`;
     tbody.appendChild(tr);
   }
-  // By game ranking
+  // By game ranking (exclude practice game)
   const wrap = $('stats-by-game'); wrap.innerHTML = '';
-  if (!_scores.length) { wrap.innerHTML = '<p class="empty">No game scores yet.</p>'; return; }
-  for (const g of _games) {
-    const gameScores = _scores.filter(s => s.game_id === g.id);
-    if (!gameScores.length) continue;
-    // Best score per student
+  if (!gameScores.length) {
+    wrap.innerHTML = '<p class="empty">No game scores yet.</p>';
+  }
+  for (const g of visibleGames) {
+    const gs = _scores.filter(s => s.game_id === g.id);
+    if (!gs.length) continue;
+    // Best score per student (within THIS game)
     const best = {};
-    for (const s of gameScores) {
+    for (const s of gs) {
       if (!best[s.student_id] || s.score > best[s.student_id].score) best[s.student_id] = s;
     }
     const ranking = Object.values(best).sort((a,b) => b.score - a.score);
@@ -363,6 +377,39 @@ async function refreshStats() {
     });
     block.appendChild(tbl);
     wrap.appendChild(block);
+  }
+
+  // ----- Practice results — grouped by student, listed by date -----
+  const pwrap = $('practice-by-student'); pwrap.innerHTML = '';
+  const practiceScores = practiceId ? _scores.filter(s => s.game_id === practiceId) : [];
+  $('practice-empty').classList.toggle('hidden', practiceScores.length > 0);
+  if (practiceScores.length) {
+    const byStudent = {};
+    for (const s of practiceScores) {
+      (byStudent[s.student_id] = byStudent[s.student_id] || []).push(s);
+    }
+    const studentIds = Object.keys(byStudent).sort((a,b) =>
+      ((stuById[a]||{}).name || '').localeCompare((stuById[b]||{}).name || ''));
+    for (const sid of studentIds) {
+      const stu = stuById[sid];
+      const block = document.createElement('div');
+      block.style.marginBottom = '18px';
+      const rounds = byStudent[sid];
+      const totalCorrect = rounds.reduce((a,b) => a + (b.score||0), 0);
+      block.innerHTML = `<h4 style="margin:6px 0 6px;">${escapeHtml(stu?stu.name:'(deleted)')}
+        <span style="font-size:13px; font-weight:700; color:var(--muted);">— ${rounds.length} round${rounds.length===1?'':'s'}, ${totalCorrect} total correct</span></h4>`;
+      const tbl = document.createElement('table'); tbl.className = 'tbl';
+      tbl.innerHTML = '<thead><tr><th>Date</th><th>Correct answers</th></tr></thead><tbody></tbody>';
+      const tb = tbl.querySelector('tbody');
+      const sorted = [...rounds].sort((a,b) => (b.played_at||'').localeCompare(a.played_at||''));
+      for (const s of sorted) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${formatDate(s.played_at)}</td><td><b>${s.score}</b></td>`;
+        tb.appendChild(tr);
+      }
+      block.appendChild(tbl);
+      pwrap.appendChild(block);
+    }
   }
 }
 function formatDate(s) {
