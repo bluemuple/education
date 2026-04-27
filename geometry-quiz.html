@@ -236,13 +236,7 @@
 </head>
 <body>
 <div class="wrap">
-  <a id="back-to-game" href="student.html" style="display:none; text-decoration:none; font-weight:900; color:#a84a00; padding:8px 14px; border:3px solid #1d1d24; border-radius:14px; background:#fff; box-shadow:0 4px 0 rgba(0,0,0,0.12); margin-bottom:12px; align-self:flex-start; width:fit-content;">← Back to Maths Game</a>
-  <script>
-    // Show "back to maths game" link only when launched from the student app
-    if (new URLSearchParams(location.search).get('from') === 'student') {
-      document.getElementById('back-to-game').style.display = 'inline-block';
-    }
-  </script>
+  <a id="back-to-game" href="student.html" style="display:inline-block; text-decoration:none; font-weight:900; color:#a84a00; padding:8px 14px; border:3px solid #1d1d24; border-radius:14px; background:#fff; box-shadow:0 4px 0 rgba(0,0,0,0.12); margin-bottom:12px; align-self:flex-start; width:fit-content;">🏠 Back to menu</a>
   <header class="bar">
     <div class="title">📐 2D Shapes Quiz</div>
     <div class="stats">
@@ -984,6 +978,17 @@ function updateStats() {
 }
 
 function pickQuestion() {
+  // First, if any hint-used questions are due to be re-asked, prefer them.
+  const due = (state.mustRedo || []).filter(r => r.readyAfter <= state.qCount);
+  if (due.length) {
+    const r = due[0];
+    const q = QUESTIONS.find(x => x.id === r.id);
+    if (q) {
+      // Mark as a redo so the renderer knows to hide the hint button
+      const clone = Object.assign({}, q, { _isRedo: true });
+      return clone;
+    }
+  }
   // Pick a random question at current level not yet asked; fall back if exhausted.
   let pool = QUESTIONS.filter(q => q.level === state.level && !state.askedIds.has(q.id));
   if (pool.length === 0) {
@@ -1036,14 +1041,14 @@ function renderQuestion() {
   } else if (q.type === 'sa') {
     // Short-answer input
     const wrap = document.createElement('div');
-    wrap.style.cssText = 'display:flex; gap:8px; width:100%;';
+    wrap.style.cssText = 'display:flex; gap:8px; width:100%; flex-wrap:wrap;';
     const inp = document.createElement('input');
     inp.type = 'text';
     inp.id = 'sa-input';
     inp.autocomplete = 'off';
     inp.spellcheck = false;
     inp.placeholder = 'Type your answer here…';
-    inp.style.cssText = 'flex:1; border:3px solid var(--ink); border-radius:14px; padding:12px 14px; font-size:18px; font-weight:800; background:#fff8e8;';
+    inp.style.cssText = 'flex:1; min-width:160px; border:3px solid var(--ink); border-radius:14px; padding:12px 14px; font-size:18px; font-weight:800; background:#fff8e8;';
     inp.oninput = () => {
       state.selected = inp.value;
       el('btn-submit').disabled = !inp.value.trim();
@@ -1052,6 +1057,35 @@ function renderQuestion() {
       if (e.key === 'Enter' && !el('btn-submit').disabled) submitAnswer();
     };
     wrap.appendChild(inp);
+
+    // Hint button — only on first attempt of an SA question.
+    // Using a hint counts as "not yet passed" and re-queues the question a few questions later.
+    state.hintUsed = false;
+    if (!q._isRedo) {
+      const hintBtn = document.createElement('button');
+      hintBtn.type = 'button';
+      hintBtn.className = 'btn secondary';
+      hintBtn.id = 'btn-hint';
+      hintBtn.textContent = '💡 Hint';
+      hintBtn.title = 'Shows the answer — you will see this question again later.';
+      hintBtn.onclick = () => {
+        state.hintUsed = true;
+        inp.value = q.answer;
+        state.selected = inp.value;
+        el('btn-submit').disabled = false;
+        hintBtn.disabled = true;
+        hintBtn.textContent = '💡 Hint used — try again later';
+        inp.focus();
+      };
+      wrap.appendChild(hintBtn);
+    } else {
+      // Redo run — make it clear they need to do this on their own
+      const tag = document.createElement('span');
+      tag.style.cssText = 'align-self:center; font-size:13px; font-weight:800; color:#a84a00;';
+      tag.textContent = '🔁 Redo (no hint this time)';
+      wrap.appendChild(tag);
+    }
+
     opts.appendChild(wrap);
     setTimeout(() => inp.focus(), 60);
   }
@@ -1104,26 +1138,56 @@ function submitAnswer() {
   const saInput = document.getElementById('sa-input');
   if (saInput) saInput.disabled = true;
 
-  if (isCorrect) {
+  // If a hint was used on this SA question, mark it as "needs to be re-done":
+  // we'll re-inject the same question 3 turns later, and the student must solve it
+  // without a hint before the practice can finish.
+  const usedHint = !!state.hintUsed;
+  if (usedHint && q.type === 'sa') {
+    state.mustRedo = state.mustRedo || [];
+    if (!state.mustRedo.find(r => r.id === q.id)) {
+      state.mustRedo.push({ id: q.id, readyAfter: state.qCount + 3 });
+    }
+  }
+
+  if (isCorrect && !usedHint) {
     state.correct++;
     state.streakCorrect++;
     state.streakWrong = 0;
     if (state.level === 3) state.topStreakCorrect++;
     else state.topStreakCorrect = 0;
+    // If this was a redo and they got it right, clear the must-redo flag
+    if (q._isRedo) state.mustRedo = (state.mustRedo||[]).filter(r => r.id !== q.id);
+  } else if (isCorrect && usedHint) {
+    // Hint-assisted "correct" — don't reward streaks, don't progress level
+    state.streakCorrect = 0;
+    state.topStreakCorrect = 0;
   } else {
     state.streakWrong++;
     state.streakCorrect = 0;
     state.topStreakCorrect = 0;
+    // If they got the redo wrong, queue it again later
+    if (q._isRedo) {
+      state.mustRedo = state.mustRedo || [];
+      const ex = state.mustRedo.find(r => r.id === q.id);
+      if (ex) ex.readyAfter = state.qCount + 3;
+      else state.mustRedo.push({ id: q.id, readyAfter: state.qCount + 3 });
+    }
   }
 
   // Show result screen (feedback + explanation + Next)
   const fb = el('result-feedback');
-  if (isCorrect) {
+  if (isCorrect && usedHint) {
+    fb.textContent = '🤝 You used a hint — well done for typing it. You\'ll see this one again soon to try on your own.';
+    fb.className = 'feedback';
+    fb.style.color = '#a84a00';
+  } else if (isCorrect) {
     fb.textContent = '✅ Correct! ' + correctLabel;
     fb.className = 'feedback good';
+    fb.style.color = '';
   } else {
     fb.textContent = '❌ Not quite. The correct answer is: ' + correctLabel;
     fb.className = 'feedback bad';
+    fb.style.color = '';
   }
   el('result-explain').innerHTML = '<b>Why?</b> ' + q.explain;
 
@@ -1184,8 +1248,12 @@ function showConcept(topic) {
 
 function goToNextQuestion() {
   // End conditions — route through Charlie celebration first
-  if (state.topStreakCorrect >= 3) return showCharlie('🥇 You passed the top level with 3 in a row!');
-  if (state.qCount >= state.MAX_Q) return showCharlie('You finished the whole quiz!');
+  // Practice can't end while there are still hint-used questions waiting to be re-done.
+  const pendingRedos = (state.mustRedo || []).length;
+  if (state.topStreakCorrect >= 3 && pendingRedos === 0)
+    return showCharlie('🥇 You passed the top level with 3 in a row!');
+  if (state.qCount >= state.MAX_Q)
+    return showCharlie('You finished the whole quiz!');
   renderQuestion();
 }
 
@@ -1446,8 +1514,33 @@ el('btn-restart').onclick = () => {
   state.level = 2; state.qCount = 0; state.correct = 0;
   state.streakCorrect = 0; state.streakWrong = 0; state.topStreakCorrect = 0;
   state.askedIds = new Set(); state.history = [];
+  state.mustRedo = []; state.hintUsed = false;
   renderQuestion();
 };
+
+// ====================== Enter-key shortcut ======================
+// Pressing Enter on any "in-between" screen acts like clicking the prominent
+// "next" button. We intentionally do NOT trigger Submit — that's still a click,
+// to avoid accidental submissions while the student is still thinking.
+document.addEventListener('keydown', (ev) => {
+  if (ev.key !== 'Enter') return;
+  // Don't override the typing experience inside the SA input
+  const t = ev.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+  // Pick the first visible "advance" button and click it
+  const candidates = ['btn-next','btn-reward-next','btn-concept-next','btn-charlie-next'];
+  for (const id of candidates) {
+    const b = document.getElementById(id);
+    if (!b) continue;
+    // visible = inside a non-hidden section, and the button itself isn't hidden
+    if (b.classList.contains('hidden')) continue;
+    const sec = b.closest('section');
+    if (sec && sec.classList.contains('hidden')) continue;
+    ev.preventDefault();
+    b.click();
+    return;
+  }
+});
 
 // Kick off
 renderQuestion();

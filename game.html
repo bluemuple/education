@@ -121,6 +121,7 @@
 </head>
 <body>
 <div class="wrap">
+  <a href="student.html" id="back-to-menu" style="display:inline-block; text-decoration:none; font-weight:900; color:#a84a00; padding:8px 14px; border:3px solid #1d1d24; border-radius:14px; background:#fff; box-shadow:0 4px 0 rgba(0,0,0,0.12); margin-bottom:12px;">🏠 Back to menu</a>
   <header class="bar">
     <div class="game-name" id="game-name">Loading…</div>
     <div class="score-pill"><span id="score">0</span> pts</div>
@@ -459,6 +460,24 @@ function escapeHtml(s) { return (s||'').toString().replace(/[&<>"']/g, c => ({ '
 
 $('btn-home').onclick = () => { location.href = 'student.html'; };
 $('btn-replay').onclick = () => { location.reload(); };
+
+// Enter shortcut: advances to the next question after a result, or to the
+// follow-on game when the run is over. Doesn't fire while typing in the SA box.
+document.addEventListener('keydown', (ev) => {
+  if (ev.key !== 'Enter') return;
+  const t = ev.target;
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+  const candidates = ['btn-next','btn-go-game2','btn-replay'];
+  for (const id of candidates) {
+    const b = document.getElementById(id);
+    if (!b || b.classList.contains('hidden')) continue;
+    const sec = b.closest('section');
+    if (sec && sec.classList.contains('hidden')) continue;
+    ev.preventDefault();
+    b.click();
+    return;
+  }
+});
 </script>
 </body>
 </html>
