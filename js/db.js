@@ -152,6 +152,52 @@
     return all.filter(s => s.student_id === student_id && (!game_id || s.game_id === game_id));
   }
 
+  // ===================== DEVICE LOGINS =====================
+  // Each browser has a stable device id stored in localStorage; we record one
+  // (student_id, device_id) row per (student, browser) pair. The teacher's
+  // Students table shows a warning when > 2 different devices have logged in
+  // as the same student name.
+  function getOrCreateDeviceId() {
+    let did = '';
+    try { did = localStorage.getItem('mg.deviceId') || ''; } catch(e){}
+    if (!did) {
+      did = 'd_' + Date.now().toString(36) + Math.random().toString(36).slice(2,10);
+      try { localStorage.setItem('mg.deviceId', did); } catch(e){}
+    }
+    return did;
+  }
+  async function recordStudentLogin(student_id) {
+    if (!student_id) return;
+    const device_id = getOrCreateDeviceId();
+    const now = new Date().toISOString();
+    if (useSupabase) {
+      const { error } = await sb.from('device_logins').upsert(
+        { student_id, device_id, last_seen_at: now },
+        { onConflict: 'student_id,device_id' }
+      );
+      logErr('recordStudentLogin', error);
+      return;
+    }
+    const list = ls.get('device_logins', []);
+    const ex = list.find(d => d.student_id === student_id && d.device_id === device_id);
+    if (ex) ex.last_seen_at = now;
+    else list.push({ id: uid(), student_id, device_id, last_seen_at: now });
+    ls.set('device_logins', list);
+  }
+  async function listDeviceCounts() {
+    // Returns { studentId: numberOfDistinctDevices }
+    if (useSupabase) {
+      const { data, error } = await sb.from('device_logins').select('student_id,device_id');
+      logErr('listDeviceCounts', error);
+      const counts = {};
+      for (const r of (data || [])) counts[r.student_id] = (counts[r.student_id]||0) + 1;
+      return counts;
+    }
+    const counts = {};
+    for (const r of ls.get('device_logins', [])) counts[r.student_id] = (counts[r.student_id]||0) + 1;
+    return counts;
+  }
+
   // ===================== COMPLETIONS (practice / game1 unlock) =====================
   async function markCompleted(student_id, kind) {
     const row = { student_id, kind, completed_at: new Date().toISOString() };
@@ -200,6 +246,7 @@
     listGames, updateGame, addCustomGame, deleteGame,
     recordScore, listScores, listScoresFor,
     markCompleted, hasCompleted,
+    recordStudentLogin, listDeviceCounts,
     exportJSON, importJSON, clearAll,
   };
 })();
