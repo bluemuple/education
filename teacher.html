@@ -136,6 +136,14 @@
         </table>
         <p class="empty hidden" id="stu-empty">No students yet — add one above.</p>
       </div>
+
+      <div class="card" style="border-color:#e45858; background:#fff5f5;">
+        <h3 style="margin:0 0 6px; color:#8a1e1e;">⚠️ Danger zone</h3>
+        <p style="margin:0 0 10px; font-weight:700;">
+          Deletes <b>every student</b> in this class plus <b>all their scores</b> and practice/game completions. Cannot be undone.
+        </p>
+        <button class="btn danger" id="stu-reset">🗑 Reset all student data</button>
+      </div>
     </section>
 
     <!-- ============ GAMES ============ -->
@@ -217,6 +225,15 @@ $('stu-add').onclick = async () => {
   await DB.addStudent(name, pickedGender);
   $('stu-name').value = '';
   refreshStudents();
+};
+$('stu-reset').onclick = async () => {
+  const all = await DB.listStudents();
+  if (!all.length) { alert('There are no students to delete.'); return; }
+  const typed = prompt(`This will delete ALL ${all.length} student(s) and every score/completion they have.\n\nType DELETE to confirm:`);
+  if ((typed||'').trim() !== 'DELETE') return;
+  for (const s of all) await DB.deleteStudent(s.id);
+  await refreshStudents();
+  alert('All student data has been reset.');
 };
 async function refreshStudents() {
   _students = await DB.listStudents();
