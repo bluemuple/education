@@ -86,6 +86,14 @@
                  background:none; border:none; cursor:pointer; padding:6px 8px; }
 
   @media (max-width:520px) { .gender-row { flex-direction:column; } }
+
+  /* Ranking table */
+  table.rank-tbl { width:100%; border-collapse:collapse; }
+  table.rank-tbl th, table.rank-tbl td { border-bottom:2px solid #eee; padding:10px 8px; text-align:left; font-size:14px; }
+  table.rank-tbl th { background:#fff3df; font-weight:900; }
+  table.rank-tbl tr.top3-red td { background:#ffe1e1; color:#c0392b; font-weight:900; }
+  table.rank-tbl tr.me-row td   { outline:3px dashed var(--primary); outline-offset:-3px; }
+  .empty-rank { color:var(--muted); font-style:italic; padding:18px 0; text-align:center; }
 </style>
 </head>
 <body>
@@ -131,6 +139,18 @@
     <div class="tiles" id="tiles"></div>
     <p class="lock-msg" id="lock-msg"></p>
   </section>
+
+  <!-- Pre-game ranking page -->
+  <section id="screen-ranking" class="card hidden">
+    <h2 class="page-title" id="rank-title">Ranking</h2>
+    <p id="rank-sub" style="text-align:center; color:var(--muted); font-weight:700; margin:-6px 0 14px;">…</p>
+    <div id="rank-content"></div>
+    <div class="yn-row" style="margin-top:18px; gap:10px; flex-wrap:wrap; justify-content:center;">
+      <button class="btn secondary" id="rank-back">🏠 Back to menu</button>
+      <button class="btn good"      id="rank-play">▶ Play</button>
+      <button class="btn"           id="rank-go-g2">Continue to Game 2 ➜</button>
+    </div>
+  </section>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -156,7 +176,8 @@ function loadSession(){ try { return JSON.parse(sessionStorage.getItem(SESSION_K
 function clearSession(){ try { sessionStorage.removeItem(SESSION_KEY); } catch(e){} }
 
 function showScreen(id) {
-  ['screen-gender','screen-name','screen-confirm','screen-page2'].forEach(s => $(s).classList.add('hidden'));
+  ['screen-gender','screen-name','screen-confirm','screen-page2','screen-ranking']
+    .forEach(s => $(s).classList.add('hidden'));
   $(id).classList.remove('hidden');
   // Stop any TTS when changing screen
   TTS.stop();
@@ -233,7 +254,7 @@ async function renderPage2() {
     done: state.practiceDone,
     onClick: openPractice,
   }));
-  // Game 1
+  // Game 1 — once both Practice and Game 1 are done, show ranking page first
   const g1 = state.games.find(g => g.slot === 'game1');
   tiles.appendChild(makeTile({
     label: g1 ? g1.name : 'Yesterday Me vs. Today Me',
@@ -243,9 +264,12 @@ async function renderPage2() {
     done: state.game1Done,
     locked: !state.practiceDone,
     lockedMsg: 'Finish Practice first to unlock Game 1.',
-    onClick: () => openGame(g1.id),
+    onClick: () => {
+      if (state.practiceDone && state.game1Done) showRanking('game1', g1);
+      else openGame(g1.id);
+    },
   }));
-  // Game 2
+  // Game 2 — also show ranking page first (once unlocked)
   const g2 = state.games.find(g => g.slot === 'game2');
   tiles.appendChild(makeTile({
     label: g2 ? g2.name : 'Me vs. the Class',
@@ -254,7 +278,10 @@ async function renderPage2() {
     badge: 'Game 2',
     locked: !state.game1Done,
     lockedMsg: 'Play Game 1 at least once to unlock Game 2.',
-    onClick: () => openGame(g2.id),
+    onClick: () => {
+      if (state.game1Done) showRanking('game2', g2);
+      else openGame(g2.id);
+    },
   }));
   // Custom games (teacher-created), all unlocked once Game 1 is done
   for (const g of state.games.filter(g => g.slot === 'custom')) {
@@ -293,6 +320,81 @@ function openGame(gameId) {
   // Pass student + game ids to the game page via query string
   const q = new URLSearchParams({ student: state.studentId, game: gameId });
   window.location.href = 'game.html?' + q.toString();
+}
+
+// ---------- pre-game ranking screen ----------
+async function showRanking(slot, game) {
+  $('rank-title').textContent = '🏆 ' + (game.name || (slot==='game1'?'Yesterday Me vs. Today Me':'Me vs. the Class'));
+  const content = $('rank-content');
+  content.innerHTML = '';
+
+  if (slot === 'game1') {
+    // Personal history for this student
+    $('rank-sub').textContent = 'Your past scores in this game';
+    const myScores = await DB.listScoresFor(state.studentId, game.id);
+    const sorted = [...myScores].sort((a,b) => b.score - a.score);
+    if (!sorted.length) {
+      content.innerHTML = '<p class="empty-rank">You haven\'t played this game yet. Tap Play to start!</p>';
+    } else {
+      const tbl = document.createElement('table'); tbl.className = 'rank-tbl';
+      tbl.innerHTML = '<thead><tr><th>Rank</th><th>When</th><th>Score</th></tr></thead><tbody></tbody>';
+      const tb = tbl.querySelector('tbody');
+      sorted.slice(0, 12).forEach((s, i) => {
+        const tr = document.createElement('tr');
+        if (i < 3) tr.classList.add('top3-red');
+        tr.innerHTML = `<td>${i+1}</td><td>${formatDate(s.played_at)}</td><td><b>${s.score}</b></td>`;
+        tb.appendChild(tr);
+      });
+      content.appendChild(tbl);
+    }
+  } else { // game2 (or any class-wide ranking)
+    $('rank-sub').textContent = 'Class ranking — best score per student';
+    const [allScores, students] = await Promise.all([DB.listScores(), DB.listStudents()]);
+    const stuById = Object.fromEntries(students.map(s => [s.id, s]));
+    const best = {};
+    for (const s of allScores.filter(x => x.game_id === game.id)) {
+      if (!best[s.student_id] || s.score > best[s.student_id].score) best[s.student_id] = s;
+    }
+    const ranking = Object.values(best).sort((a,b) => b.score - a.score);
+    if (!ranking.length) {
+      content.innerHTML = '<p class="empty-rank">No-one has played this game yet. Be first — tap Play!</p>';
+    } else {
+      const tbl = document.createElement('table'); tbl.className = 'rank-tbl';
+      tbl.innerHTML = '<thead><tr><th>Rank</th><th>Student</th><th>Best score</th><th>When</th></tr></thead><tbody></tbody>';
+      const tb = tbl.querySelector('tbody');
+      ranking.forEach((s, i) => {
+        const stu = stuById[s.student_id];
+        const tr = document.createElement('tr');
+        if (i < 3) tr.classList.add('top3-red');
+        if (s.student_id === state.studentId) tr.classList.add('me-row');
+        tr.innerHTML = `<td>${i+1}</td><td>${escapeHtml(stu?stu.name:'(unknown)')}</td>
+                        <td><b>${s.score}</b></td><td>${formatDate(s.played_at)}</td>`;
+        tb.appendChild(tr);
+      });
+      content.appendChild(tbl);
+    }
+  }
+
+  // Wire the three buttons
+  $('rank-play').onclick = () => openGame(game.id);
+  $('rank-back').onclick = () => showScreen('screen-page2');
+  const g2 = state.games.find(g => g.slot === 'game2');
+  const goG2 = $('rank-go-g2');
+  if (slot === 'game2' || !g2) {
+    // Already on Game 2's ranking — hide the redundant button
+    goG2.classList.add('hidden');
+  } else {
+    goG2.classList.remove('hidden');
+    goG2.onclick = () => openGame(g2.id);
+  }
+
+  showScreen('screen-ranking');
+}
+
+function formatDate(s) {
+  if (!s) return '';
+  const d = new Date(s);
+  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
 }
 function signOut() {
   state.studentId = null; state.studentName = null; state.gender = null;
