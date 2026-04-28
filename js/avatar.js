@@ -152,47 +152,98 @@ window.AVATAR = (function () {
           <circle cx="172" cy="68" r="11"/>
           <circle cx="228" cy="68" r="11"/>
         </g>` },
+    /* ── Long / women's styles — single connected donut shape (outer hair around head + inner cut-out around the face) so nothing floats. Bangs/fringe drawn ON TOP, sharing colour. ── */
     { id:'h15', label:'Wavy', body: c => `
-        ${sp('M104,330 Q88,200 102,128 Q120,68 200,62 Q280,68 298,128 Q312,200 296,330 Q282,256 282,200 Q272,150 200,142 Q128,150 118,200 Q118,256 104,330 Z', c, STROKE)}
-        ${sp('M150,128 Q170,86 200,118 Q230,86 250,128 Q230,108 200,118 Q170,108 150,128 Z', c, STROKE_M)}
-        <path d="M118,180 Q108,210 116,240" fill="none" stroke="${INK}" stroke-width="${STROKE_S}" stroke-linecap="round"/>
-        <path d="M282,180 Q292,210 284,240" fill="none" stroke="${INK}" stroke-width="${STROKE_S}" stroke-linecap="round"/>` },
-    { id:'h16', label:'Long', body: c => sp('M114,300 Q108,76 200,68 Q292,76 286,300 Q278,160 200,148 Q122,160 114,300 Z', c, STROKE) },
-    { id:'h17', label:'Bob',  body: c => sp('M120,224 Q116,76 200,72 Q284,76 280,224 L268,194 Q250,158 200,156 Q150,158 132,194 Z', c, STROKE) },
-    { id:'h18', label:'Lob',  body: c => sp('M118,260 Q112,76 200,72 Q288,76 282,260 L272,194 Q252,160 200,158 Q148,160 128,194 Z', c, STROKE) },
+        <path d="M104,344
+                 Q90,310 92,250 Q88,170 104,118 Q124,62 200,58 Q276,62 296,118 Q312,170 308,250 Q310,310 296,344
+                 L268,344 Q284,242 282,180 Q272,154 200,148 Q128,154 118,180 Q116,242 132,344 Z"
+              fill="${c}" stroke="${INK}" stroke-width="${STROKE}" stroke-linejoin="round"/>
+        <path d="M148,128 Q170,90 200,128 Q230,90 252,128 Q232,140 200,138 Q168,140 148,128 Z"
+              fill="${c}" stroke="${INK}" stroke-width="${STROKE_M}"/>
+        <path d="M104,210 Q92,232 100,258"   fill="none" stroke="${INK}" stroke-width="${STROKE_S}" stroke-linecap="round" opacity=".55"/>
+        <path d="M296,210 Q308,232 300,258"  fill="none" stroke="${INK}" stroke-width="${STROKE_S}" stroke-linecap="round" opacity=".55"/>` },
+
+    { id:'h16', label:'Long', body: c => `
+        <path d="M118,330
+                 Q104,250 108,170 Q116,76 200,68 Q284,76 292,170 Q296,250 282,330
+                 L260,330 Q278,176 200,160 Q122,176 140,330 Z"
+              fill="${c}" stroke="${INK}" stroke-width="${STROKE}" stroke-linejoin="round"/>
+        <path d="M150,128 Q175,98 200,128 Q225,98 252,128 Q232,140 200,138 Q170,140 150,128 Z"
+              fill="${c}" stroke="${INK}" stroke-width="${STROKE_M}"/>` },
+
+    { id:'h17', label:'Bob', body: c => `
+        <path d="M118,238
+                 Q104,176 108,140 Q116,76 200,68 Q284,76 292,140 Q296,176 282,238
+                 L262,236 Q272,182 252,168 Q224,154 200,154 Q176,154 148,168 Q128,182 138,236 Z"
+              fill="${c}" stroke="${INK}" stroke-width="${STROKE}" stroke-linejoin="round"/>
+        <path d="M150,128 Q175,98 200,128 Q225,98 252,128 Q232,140 200,138 Q170,140 150,128 Z"
+              fill="${c}" stroke="${INK}" stroke-width="${STROKE_M}"/>` },
+
+    { id:'h18', label:'Lob', body: c => `
+        <path d="M118,278
+                 Q104,196 108,150 Q116,76 200,68 Q284,76 292,150 Q296,196 282,278
+                 L260,278 Q278,180 200,164 Q122,180 140,278 Z"
+              fill="${c}" stroke="${INK}" stroke-width="${STROKE}" stroke-linejoin="round"/>
+        <path d="M150,128 Q175,98 200,128 Q225,98 252,128 Q232,140 200,138 Q170,140 150,128 Z"
+              fill="${c}" stroke="${INK}" stroke-width="${STROKE_M}"/>` },
+
     { id:'h19', label:'Pony', body: c => `
-        ${sp('M124,150 Q118,72 200,68 Q282,72 276,150 Q256,114 215,108 Q170,108 156,120 Q140,128 124,150 Z', c, STROKE)}
-        ${sp('M270,130 Q316,170 304,238 Q286,206 262,184 Z', c, STROKE_M)}` },
+        <path d="M124,206
+                 Q116,140 124,108 Q140,72 200,68 Q260,72 276,108 Q284,140 276,206
+                 Q282,158 252,138 Q224,118 200,118 Q176,118 148,138 Q118,158 124,206 Z"
+              fill="${c}" stroke="${INK}" stroke-width="${STROKE}" stroke-linejoin="round"/>
+        <path d="M268,140
+                 Q310,168 312,210 Q314,250 296,266 Q284,260 286,224 Q286,196 270,176 Q258,160 254,148 Z"
+              fill="${c}" stroke="${INK}" stroke-width="${STROKE_M}" stroke-linejoin="round"/>
+        <circle cx="266" cy="146" r="6" fill="${c}" stroke="${INK}" stroke-width="${STROKE_S-1}"/>` },
+
     { id:'h20', label:'Pigtail', body: c => `
-        ${sp('M132,138 Q140,76 200,72 Q260,76 268,138 Q250,112 200,108 Q150,112 132,138 Z', c, STROKE)}
-        <ellipse cx="118" cy="160" rx="20" ry="34" fill="${c}" stroke="${INK}" stroke-width="${STROKE_M}"/>
-        <ellipse cx="282" cy="160" rx="20" ry="34" fill="${c}" stroke="${INK}" stroke-width="${STROKE_M}"/>` },
+        <path d="M132,156
+                 Q124,86 200,72 Q276,86 268,156
+                 Q250,118 200,114 Q150,118 132,156 Z"
+              fill="${c}" stroke="${INK}" stroke-width="${STROKE}" stroke-linejoin="round"/>
+        <path d="M120,148
+                 Q90,170 86,220 Q86,266 110,278 Q126,272 124,236 Q124,200 132,160 Z"
+              fill="${c}" stroke="${INK}" stroke-width="${STROKE_M}" stroke-linejoin="round"/>
+        <path d="M280,148
+                 Q310,170 314,220 Q314,266 290,278 Q274,272 276,236 Q276,200 268,160 Z"
+              fill="${c}" stroke="${INK}" stroke-width="${STROKE_M}" stroke-linejoin="round"/>` },
+
     { id:'h21', label:'Bun', body: c => `
-        ${sp('M132,140 Q140,80 200,78 Q260,80 268,140 Q250,118 200,116 Q150,118 132,140 Z', c, STROKE)}
-        <circle cx="200" cy="56" r="26" fill="${c}" stroke="${INK}" stroke-width="${STROKE_M}"/>
-        <path d="M186,52 Q200,44 214,52" fill="none" stroke="${INK}" stroke-width="${STROKE_S}"/>` },
+        <path d="M122,170
+                 Q108,138 112,100 Q126,52 200,48 Q274,52 288,100 Q292,138 278,170
+                 Q264,140 200,134 Q136,140 122,170 Z"
+              fill="${c}" stroke="${INK}" stroke-width="${STROKE}" stroke-linejoin="round"/>
+        <ellipse cx="200" cy="48" rx="34" ry="26" fill="${c}" stroke="${INK}" stroke-width="${STROKE_M}"/>
+        <path d="M180,48 Q200,38 220,48" fill="none" stroke="${INK}" stroke-width="${STROKE_S-1}" opacity=".7"/>` },
+
     { id:'h22', label:'Braids', body: c => `
-        ${sp('M130,144 Q140,76 200,72 Q260,76 270,144 Q250,118 200,114 Q150,118 130,144 Z', c, STROKE)}
-        <g fill="${c}" stroke="${INK}" stroke-width="${STROKE_M-1}">
-          <path d="M118,180 Q108,230 122,290 L128,290 Q126,230 130,180 Z"/>
-          <path d="M270,180 Q278,230 270,290 L276,290 Q282,230 282,180 Z"/>
-        </g>
-        <g stroke="${INK}" stroke-width="2" fill="none">
-          <line x1="120" y1="200" x2="128" y2="206"/>
-          <line x1="118" y1="220" x2="128" y2="226"/>
-          <line x1="120" y1="240" x2="128" y2="246"/>
-          <line x1="120" y1="260" x2="128" y2="266"/>
-          <line x1="280" y1="200" x2="272" y2="206"/>
-          <line x1="280" y1="220" x2="272" y2="226"/>
-          <line x1="280" y1="240" x2="272" y2="246"/>
-          <line x1="278" y1="260" x2="272" y2="266"/>
+        <path d="M130,160
+                 Q120,86 200,72 Q280,86 270,160
+                 Q252,124 200,118 Q148,124 130,160 Z"
+              fill="${c}" stroke="${INK}" stroke-width="${STROKE}" stroke-linejoin="round"/>
+        <path d="M118,156
+                 Q102,200 108,260 Q112,300 122,308 Q132,304 134,272 Q132,228 132,160 Z"
+              fill="${c}" stroke="${INK}" stroke-width="${STROKE_M}" stroke-linejoin="round"/>
+        <path d="M282,156
+                 Q298,200 292,260 Q288,300 278,308 Q268,304 266,272 Q268,228 268,160 Z"
+              fill="${c}" stroke="${INK}" stroke-width="${STROKE_M}" stroke-linejoin="round"/>
+        <g stroke="${INK}" stroke-width="2" fill="none" stroke-linecap="round" opacity=".75">
+          <path d="M114,196 Q120,202 126,196"/><path d="M114,220 Q120,226 126,220"/>
+          <path d="M114,244 Q120,250 126,244"/><path d="M114,268 Q120,274 126,268"/>
+          <path d="M286,196 Q280,202 274,196"/><path d="M286,220 Q280,226 274,220"/>
+          <path d="M286,244 Q280,250 274,244"/><path d="M286,268 Q280,274 274,268"/>
         </g>` },
+
     { id:'h23', label:'Flat', body: c => `
-        ${sp('M132,134 L132,100 Q132,80 200,80 Q268,80 268,100 L268,134 Q220,118 200,118 Q180,118 132,134 Z', c, STROKE)}
-        <line x1="132" y1="116" x2="268" y2="116" stroke="${INK}" stroke-width="${STROKE_S-1}"/>` },
+        <path d="M132,134 L132,100 Q132,80 200,80 Q268,80 268,100 L268,134 Q220,118 200,118 Q180,118 132,134 Z"
+              fill="${c}" stroke="${INK}" stroke-width="${STROKE}" stroke-linejoin="round"/>
+        <line x1="132" y1="116" x2="268" y2="116" stroke="${INK}" stroke-width="${STROKE_S-1}" opacity=".6"/>` },
+
     { id:'h24', label:'Sweep2', body: c => `
-        ${sp('M120,160 Q120,72 200,68 Q280,72 280,160 Q230,90 168,128 Q140,150 120,160 Z', c, STROKE)}
-        <path d="M144,116 Q190,98 248,108" fill="none" stroke="${INK}" stroke-width="${STROKE_S}"/>` },
+        <path d="M120,160 Q120,72 200,68 Q280,72 280,160 Q230,90 168,128 Q140,150 120,160 Z"
+              fill="${c}" stroke="${INK}" stroke-width="${STROKE}" stroke-linejoin="round"/>
+        <path d="M144,116 Q190,98 248,108" fill="none" stroke="${INK}" stroke-width="${STROKE_S}" opacity=".5"/>` },
   ];
 
   const EYES = [
@@ -551,13 +602,13 @@ window.AVATAR = (function () {
       items: NOSES, palette:null },
     { id:'beard', label:'Beard',
       icon:`<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6,12 Q9,10 14,12 Q16,11 18,12 Q23,10 26,12 Q22,15 18,13 Q16,14 14,13 Q10,15 6,12 Z"/></svg>`,
-      items: BEARDS, palette:'hair' },
+      items: BEARDS, palette:'beard' },
     { id:'glass', label:'Glasses',
       icon:`<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="9" cy="16" r="5"/><circle cx="23" cy="16" r="5"/><line x1="14" y1="16" x2="18" y2="16"/></svg>`,
       items: GLASSES, palette:null },
     { id:'hat',   label:'Hat',
       icon:`<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5,22 Q6,12 16,12 Q26,12 27,22 Z"/><line x1="4" y1="22" x2="28" y2="22"/></svg>`,
-      items: HATS, palette:'hair' },
+      items: HATS, palette:'hat' },
     { id:'shirt', label:'Shirt',
       icon:`<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6,28 L6,16 L11,12 L16,16 L21,12 L26,16 L26,28 Z"/></svg>`,
       items: SHIRTS, palette:'shirt' },
@@ -567,12 +618,16 @@ window.AVATAR = (function () {
     face:'f1', hair:'h4', eyes:'e1', brows:'b1', mouth:'m1', nose:'n1',
     beard:'mu0', glass:'g0', hat:'ht0', shirt:'s1',
     skin:'#f7c9a3', hairColor:'#1a1a1a', shirtColor:'#3aa0ff',
+    beardColor:'#1a1a1a', hatColor:'#d64b3b',
   };
 
   function findItem(items, id) { return items.find(x => x.id === id) || items[0]; }
 
   function render(profile) {
     const p = Object.assign({}, DEFAULT, profile || {});
+    // Back-fill new color fields from hairColor for older profiles that lack them
+    const beardCol = p.beardColor || p.hairColor;
+    const hatCol   = p.hatColor   || p.hairColor;
     const face  = findItem(FACE_SHAPES, p.face);
     const hair  = findItem(HAIR_STYLES, p.hair);
     const eyes  = findItem(EYES, p.eyes);
@@ -588,14 +643,14 @@ window.AVATAR = (function () {
       <path d="M178,288 L178,322 Q178,332 200,332 Q222,332 222,322 L222,288 Z" fill="${p.skin}" stroke="${INK}" stroke-width="${STROKE}" stroke-linejoin="round"/>
       ${earsFor(face, p.skin)}
       ${face.body(p.skin)}
-      ${beard.body(p.hairColor)}
+      ${beard.body(beardCol)}
       ${nose.body()}
       ${mouth.body()}
       ${eyes.body()}
       ${brows.body()}
       ${glass.body()}
       ${hair.body(p.hairColor)}
-      ${hat.body(p.hairColor)}
+      ${hat.body(hatCol)}
     `;
     return `<svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
   }
@@ -605,6 +660,8 @@ window.AVATAR = (function () {
     const p = Object.assign({}, DEFAULT, profile || {});
     const skin = p.skin;
     const hair = p.hairColor;
+    const beardCol = p.beardColor || p.hairColor;
+    const hatCol   = p.hatColor   || p.hairColor;
     const baseHead = `
       <path d="M${110-15},205 Q${110-17},183 110,183 L110,227 Q${110-17},227 ${110-15},205 Z" fill="#fff" stroke="${INK}" stroke-width="${STROKE_M}"/>
       <path d="M${290+15},205 Q${290+17},183 290,183 L290,227 Q${290+17},227 ${290+15},205 Z" fill="#fff" stroke="${INK}" stroke-width="${STROKE_M}"/>
@@ -619,8 +676,8 @@ window.AVATAR = (function () {
       case 'mouth':
       case 'nose':
       case 'glass': return `<svg viewBox="0 0 400 400">${baseHead}${item.body()}${baseShoulders}</svg>`;
-      case 'beard':
-      case 'hat':   return `<svg viewBox="0 0 400 400">${baseHead}${item.body(hair)}${baseShoulders}</svg>`;
+      case 'beard': return `<svg viewBox="0 0 400 400">${baseHead}${item.body(beardCol)}${baseShoulders}</svg>`;
+      case 'hat':   return `<svg viewBox="0 0 400 400">${baseHead}${item.body(hatCol)}${baseShoulders}</svg>`;
       case 'shirt': return `<svg viewBox="0 0 400 400">${baseHead}${item.body(p.shirtColor)}</svg>`;
     }
     return '';
