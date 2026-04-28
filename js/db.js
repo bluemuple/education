@@ -322,29 +322,24 @@
   //   challenge              — at least 1 game2 ('Me vs the Class') play
   //   warrior                — top 3 (best score per student) in any game1/game2/custom game
   //   effort                 — total of (practice + game) plays ≥ 7
-  async function getEarnedBadges(student_id) {
+  // Pure helper: compute one student's badges from already-fetched data.
+  function computeBadges(student_id, allScores, allGames) {
     const earned = new Set();
     if (!student_id) return earned;
-    const [scores, games, students] = await Promise.all([
-      listScores(), listGames(), listStudents(),
-    ]);
-    const practiceGame = (games || []).find(g => g.slot === 'practice');
-    const myScores = (scores || []).filter(s => s.student_id === student_id);
+    const practiceGame = (allGames || []).find(g => g.slot === 'practice');
+    const myScores = (allScores || []).filter(s => s.student_id === student_id);
     if (!myScores.length) return earned;
 
     const isPractice = (s) => practiceGame && s.game_id === practiceGame.id;
     const myPractice = myScores.filter(isPractice);
     const myGame     = myScores.filter(s => !isPractice(s));
 
-    // practice_makes_perfect
     if (myPractice.length >= 1) earned.add('practice_makes_perfect');
 
-    // better_me — at least 2 scores in same game
     const byGame = {};
     for (const s of myGame) (byGame[s.game_id] = byGame[s.game_id] || []).push(s);
     if (Object.values(byGame).some(arr => arr.length >= 2)) earned.add('better_me');
 
-    // even_better_me — latest score beat their previous best in same game
     for (const arr of Object.values(byGame)) {
       if (arr.length < 2) continue;
       const sorted = [...arr].sort((a,b) => (a.played_at||'').localeCompare(b.played_at||''));
@@ -353,14 +348,12 @@
       if ((latest.score|0) > prevBest) { earned.add('even_better_me'); break; }
     }
 
-    // challenge — played game2
-    const game2 = (games || []).find(g => g.slot === 'game2');
+    const game2 = (allGames || []).find(g => g.slot === 'game2');
     if (game2 && myGame.some(s => s.game_id === game2.id)) earned.add('challenge');
 
-    // warrior — top 3 best per student in any game1/game2/custom game
-    for (const g of (games || [])) {
+    for (const g of (allGames || [])) {
       if (g.slot === 'practice') continue;
-      const gscores = (scores || []).filter(s => s.game_id === g.id);
+      const gscores = (allScores || []).filter(s => s.game_id === g.id);
       if (!gscores.length) continue;
       const best = {};
       for (const s of gscores) {
@@ -372,10 +365,25 @@
       }
     }
 
-    // effort — total plays ≥ 7
     if (myScores.length >= 7) earned.add('effort');
-
     return earned;
+  }
+
+  async function getEarnedBadges(student_id) {
+    if (!student_id) return new Set();
+    const [scores, games] = await Promise.all([listScores(), listGames()]);
+    return computeBadges(student_id, scores, games);
+  }
+
+  // Fetches scores+games once and returns { studentId: Set(badgeIds) } for ALL
+  // students. Designed for the teacher panel so we don't re-query per row.
+  async function getEarnedBadgesAll() {
+    const [scores, games, students] = await Promise.all([
+      listScores(), listGames(), listStudents(),
+    ]);
+    const result = {};
+    for (const s of students) result[s.id] = computeBadges(s.id, scores, games);
+    return result;
   }
 
   // ===================== Util =====================
@@ -405,7 +413,7 @@
     recordScore, listScores, listScoresFor,
     markCompleted, hasCompleted,
     recordStudentLogin, removeStudentLogin, listDeviceCounts, pruneStaleLogins,
-    getStudentProfile, setStudentProfile, getEarnedBadges,
+    getStudentProfile, setStudentProfile, getEarnedBadges, getEarnedBadgesAll,
     exportJSON, importJSON, clearAll,
   };
 })();
