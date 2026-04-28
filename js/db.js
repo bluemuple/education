@@ -134,21 +134,32 @@
   // recordScore can be called as either:
   //   recordScore(student_id, game_id, score)
   //   recordScore(student_id, game_id, score, correct, wrong)
+  // If the scores table doesn't have the optional `correct` / `wrong` columns
+  // yet, automatically retry without them so a score still gets saved.
   async function recordScore(student_id, game_id, score, correct, wrong) {
-    const row = {
+    const baseRow = {
       student_id, game_id,
       score: score|0,
       played_at: new Date().toISOString(),
     };
-    if (correct != null) row.correct = correct|0;
-    if (wrong   != null) row.wrong   = wrong|0;
+    const fullRow = { ...baseRow };
+    if (correct != null) fullRow.correct = correct|0;
+    if (wrong   != null) fullRow.wrong   = wrong|0;
     if (useSupabase) {
-      const { data, error } = await sb.from('scores').insert(row).select().single();
+      let { data, error } = await sb.from('scores').insert(fullRow).select().single();
+      if (error) {
+        const msg = (error.message || '').toLowerCase();
+        // Common Supabase error texts when a column is missing
+        if (msg.includes('column') || msg.includes('schema cache') || error.code === 'PGRST204') {
+          console.warn('[DB:recordScore] correct/wrong columns missing — retrying without them. Run the alter-table SQL to enable per-question stats.');
+          ({ data, error } = await sb.from('scores').insert(baseRow).select().single());
+        }
+      }
       logErr('recordScore', error);
       return data;
     }
     const list = ls.get('scores', []);
-    const r = { id: uid(), ...row }; list.push(r); ls.set('scores', list); return r;
+    const r = { id: uid(), ...fullRow }; list.push(r); ls.set('scores', list); return r;
   }
   async function listScores() {
     if (useSupabase) {
