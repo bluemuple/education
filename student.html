@@ -127,29 +127,77 @@
   .badge-card img { width:88px; height:88px; object-fit:contain; }
   .badge-card .lbl { font-size:11px; font-weight:800; margin-top:4px; line-height:1.2; }
 
-  /* ---- Profile maker ---- */
-  .pm-preview {
-    background:#e0e3e8; border:3px solid var(--ink); border-radius:18px;
-    padding:8px; display:flex; align-items:center; justify-content:center; height:240px;
+  /* ---- Profile maker (matches the uploaded reference) ---- */
+  .pm-app {
+    background:#fff; border:3px solid var(--ink); border-radius:24px; overflow:hidden;
+    display:flex; flex-direction:column; max-width:520px; margin:0 auto;
+    height: min(86vh, 760px);
   }
-  .pm-preview svg { height:100%; width:auto; }
-  .pm-tabs { display:flex; gap:4px; overflow-x:auto; padding:8px 0; margin-top:10px; }
-  .pm-tab {
-    flex:0 0 auto; border:2px solid var(--ink); border-radius:999px;
-    background:#fff; padding:6px 12px; font-size:13px; font-weight:800; cursor:pointer;
-    white-space:nowrap;
+  .pm-preview-wrap {
+    flex: 0 0 45%;
+    background:#c9c9c9;
+    position:relative;
+    overflow:hidden;
   }
-  .pm-tab.active { background:var(--primary); color:#fff; }
-  .pm-options { display:grid; grid-template-columns:repeat(auto-fill, minmax(64px, 1fr)); gap:8px; }
+  .pm-preview-wrap svg { width:100%; height:100%; display:block; }
+  .pm-header {
+    position:absolute; top:0; left:0; right:0; padding:10px 14px;
+    display:flex; align-items:center; justify-content:space-between; z-index:10;
+  }
+  .pm-back {
+    width:36px; height:36px; background:transparent; border:none;
+    font-size:30px; font-weight:700; cursor:pointer; color:#111;
+  }
+  .pm-actions { display:flex; gap:8px; align-items:center; }
+  .pm-random {
+    background:#fff; color:#111; border:none; border-radius:999px;
+    padding:8px 14px; font-weight:700; font-size:13px; cursor:pointer;
+    box-shadow:0 1px 2px rgba(0,0,0,.1);
+  }
+  .pm-save-btn {
+    background:#111; color:#fff; border:none; border-radius:999px;
+    padding:9px 22px; font-weight:700; font-size:15px; cursor:pointer;
+  }
+  .pm-options-pane {
+    flex:1; overflow-y:auto; background:#fff;
+    padding:14px 8px 8px;
+    -webkit-overflow-scrolling:touch;
+  }
+  .pm-grid { display:grid; grid-template-columns:repeat(5, 1fr); gap:8px 4px; }
   .pm-opt {
-    border:2px solid var(--ink); border-radius:10px; padding:6px; min-height:48px;
+    aspect-ratio:1/1; border:2.5px solid transparent; border-radius:12px;
     display:flex; align-items:center; justify-content:center; cursor:pointer;
-    background:#fff; font-weight:800; font-size:13px;
+    position:relative; background:#fff; overflow:hidden;
   }
-  .pm-opt.active { outline:3px solid var(--primary); }
-  .pm-swatch { width:36px; height:36px; border:2px solid var(--ink); border-radius:50%; cursor:pointer; }
-  .pm-swatch.active { outline:3px solid var(--primary); outline-offset:2px; }
-  .swatches { display:flex; flex-wrap:wrap; gap:8px; padding:8px 0; }
+  .pm-opt svg { width:88%; height:88%; display:block; }
+  .pm-opt.selected { border-color:#ffb800; }
+  .pm-opt.none-icon::after {
+    content:""; position:absolute; inset:22%;
+    border-radius:50%; border:3px solid #b9b9b9;
+    background: linear-gradient(135deg, transparent 47%, #b9b9b9 47%, #b9b9b9 53%, transparent 53%);
+  }
+  .pm-palette {
+    flex:0 0 56px; background:#2a2d33; display:flex; align-items:center;
+    overflow-x:auto; padding:0 12px; gap:14px; scrollbar-width:none;
+  }
+  .pm-palette::-webkit-scrollbar { display:none; }
+  .pm-swatch {
+    flex:0 0 34px; width:34px; height:34px; border-radius:50%;
+    border:2.5px solid transparent; cursor:pointer;
+  }
+  .pm-swatch.selected { border-color:#fff; }
+  .pm-tabs {
+    flex:0 0 64px; background:#1d2025; display:flex; align-items:center;
+    overflow-x:auto; scrollbar-width:none; padding:0 6px;
+  }
+  .pm-tabs::-webkit-scrollbar { display:none; }
+  .pm-tab {
+    flex:0 0 60px; height:50px; margin:0 2px; border-radius:10px;
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    color:#9aa0a6; position:relative;
+  }
+  .pm-tab svg { width:30px; height:30px; }
+  .pm-tab.active { background:#33363c; color:#fff; }
 </style>
 </head>
 <body>
@@ -220,18 +268,22 @@
     </div>
   </section>
 
-  <!-- Profile maker page -->
-  <section id="screen-profile" class="card hidden">
-    <h2 class="page-title">Make your avatar</h2>
-    <div class="pm-preview" id="pm-preview"></div>
-    <div class="pm-tabs" id="pm-tabs"></div>
-    <div id="pm-options-wrap">
-      <div class="pm-options" id="pm-options"></div>
-      <div class="swatches" id="pm-swatches"></div>
-    </div>
-    <div class="yn-row" style="margin-top:16px; gap:10px;">
-      <button class="btn secondary" id="pm-cancel">← Cancel</button>
-      <button class="btn good" id="pm-save">💾 Save</button>
+  <!-- Profile maker page (mirrors the reference layout) -->
+  <section id="screen-profile" class="hidden" style="background:transparent; padding:0; border:none; box-shadow:none;">
+    <div class="pm-app">
+      <div class="pm-preview-wrap">
+        <div class="pm-header">
+          <button class="pm-back" id="pm-cancel" aria-label="Back">‹</button>
+          <div class="pm-actions">
+            <button class="pm-random" id="pm-random" aria-label="Random">🎲 Random</button>
+            <button class="pm-save-btn" id="pm-save">Save</button>
+          </div>
+        </div>
+        <svg class="pm-preview-svg" viewBox="0 0 400 400" id="pm-preview"></svg>
+      </div>
+      <div class="pm-options-pane"><div class="pm-grid" id="pm-grid"></div></div>
+      <div class="pm-palette" id="pm-palette"></div>
+      <div class="pm-tabs" id="pm-tabs"></div>
     </div>
   </section>
 
@@ -576,13 +628,15 @@ async function renderAchievement() {
   const profile = (DB.getStudentProfile ? await DB.getStudentProfile(state.studentId) : null);
   const av = $('ach-avatar');
   if (profile) {
+    av.style.background = '#fff';
     av.innerHTML = AVATAR.render(profile);
   } else {
     const fallback = AVATAR.render(AVATAR.DEFAULT)
       .replace(/"/g, '&quot;');
+    av.style.background = '#1a1a1a';        // matches the dark image so any seam is invisible
     av.innerHTML = `<img src="2d/no-profile.png" alt="No avatar yet"
-        style="width:100%; height:100%; display:block; object-fit:contain; border-radius:18px;"
-        onerror="this.parentNode.innerHTML='${fallback}'" />`;
+        style="width:100%; height:100%; display:block; object-fit:cover; border-radius:18px;"
+        onerror="this.parentNode.style.background='#fff'; this.parentNode.innerHTML='${fallback}'" />`;
   }
   // Badges
   const grid = $('badge-grid'); grid.innerHTML = '';
@@ -616,70 +670,83 @@ $('play-2dshapes').onclick = async () => {
 };
 $('ach-avatar').onclick = openProfileMaker;
 
-// ---------- Profile maker ----------
-const PM_TABS = [
-  { key:'face',      label:'Face',      kind:'option' },
-  { key:'hair',      label:'Hair',      kind:'option' },
-  { key:'eyes',      label:'Eyes',      kind:'option' },
-  { key:'brows',     label:'Brows',     kind:'option' },
-  { key:'mouth',     label:'Mouth',     kind:'option' },
-  { key:'nose',      label:'Nose',      kind:'option' },
-  { key:'moustache', label:'Moustache', kind:'option' },
-  { key:'glasses',   label:'Glasses',   kind:'option' },
-  { key:'hat',       label:'Hat',       kind:'option' },
-  { key:'shirt',     label:'Shirt',     kind:'option' },
-  { key:'skin',      label:'Skin',      kind:'color'  },
-  { key:'hairColor', label:'Hair color',kind:'color'  },
-  { key:'shirtColor',label:'Shirt color',kind:'color' },
-];
+// ---------- Profile maker (matches uploaded reference) ----------
 let _pmProfile = null;
-let _pmTab = 'face';
+let _pmActiveTab = 'face';
+const PM_PART_KEYS = { face:'face', hair:'hair', eyes:'eyes', brows:'brows', mouth:'mouth',
+                       nose:'nose', beard:'beard', glass:'glass', hat:'hat', shirt:'shirt' };
+
 async function openProfileMaker() {
   _pmProfile = Object.assign({}, AVATAR.DEFAULT,
     (await (DB.getStudentProfile ? DB.getStudentProfile(state.studentId) : null)) || {});
-  _pmTab = 'face';
-  pmRender();
+  _pmActiveTab = 'face';
+  pmRenderAll();
   showScreen('screen-profile');
 }
-function pmRender() {
-  $('pm-preview').innerHTML = AVATAR.render(_pmProfile);
-  // Tabs
+
+function pmRenderAvatar() { $('pm-preview').innerHTML = AVATAR.render(_pmProfile); }
+function pmRenderTabs() {
   const tabs = $('pm-tabs'); tabs.innerHTML = '';
-  for (const t of PM_TABS) {
-    const b = document.createElement('button');
-    b.className = 'pm-tab' + (t.key === _pmTab ? ' active' : '');
-    b.textContent = t.label;
-    b.onclick = () => { _pmTab = t.key; pmRender(); };
-    tabs.appendChild(b);
-  }
-  // Options for current tab
-  const tab = PM_TABS.find(t => t.key === _pmTab);
-  const opts = $('pm-options'); const sw = $('pm-swatches');
-  opts.innerHTML = ''; sw.innerHTML = '';
-  if (tab.kind === 'option') {
-    sw.style.display = 'none';
-    opts.style.display = '';
-    for (const v of AVATAR.CHOICES[tab.key]) {
-      const cell = document.createElement('div');
-      cell.className = 'pm-opt' + (_pmProfile[tab.key] === v ? ' active' : '');
-      // Mini preview: render avatar with just this option overridden
-      const mini = Object.assign({}, _pmProfile, { [tab.key]: v });
-      cell.innerHTML = `<div style="width:54px; height:60px;">${AVATAR.render(mini)}</div>`;
-      cell.onclick = () => { _pmProfile[tab.key] = v; pmRender(); };
-      opts.appendChild(cell);
-    }
-  } else {
-    opts.style.display = 'none';
-    sw.style.display = '';
-    for (const c of AVATAR.CHOICES[tab.key]) {
-      const cell = document.createElement('div');
-      cell.className = 'pm-swatch' + (_pmProfile[tab.key] === c ? ' active' : '');
-      cell.style.background = c;
-      cell.onclick = () => { _pmProfile[tab.key] = c; pmRender(); };
-      sw.appendChild(cell);
-    }
+  for (const t of AVATAR.TABS) {
+    const el = document.createElement('div');
+    el.className = 'pm-tab' + (t.id === _pmActiveTab ? ' active' : '');
+    el.dataset.id = t.id;
+    el.innerHTML = t.icon;
+    el.onclick = () => { _pmActiveTab = t.id; pmRenderAll(); };
+    tabs.appendChild(el);
   }
 }
+function pmRenderGrid() {
+  const tab = AVATAR.TABS.find(t => t.id === _pmActiveTab);
+  const grid = $('pm-grid'); grid.innerHTML = '';
+  const partKey = PM_PART_KEYS[tab.id];
+  for (const item of tab.items) {
+    const isNone = (item.label || '').toLowerCase() === 'none';
+    const sel = _pmProfile[partKey] === item.id;
+    const cell = document.createElement('div');
+    cell.className = 'pm-opt' + (sel ? ' selected' : '') + (isNone ? ' none-icon' : '');
+    cell.innerHTML = isNone ? '' : AVATAR.thumb(tab.id, item, _pmProfile);
+    cell.onclick = () => { _pmProfile[partKey] = item.id; pmRenderAll(); };
+    grid.appendChild(cell);
+  }
+}
+function pmRenderPalette() {
+  const tab = AVATAR.TABS.find(t => t.id === _pmActiveTab);
+  const pal = $('pm-palette'); pal.innerHTML = '';
+  if (!tab.palette) { pal.style.display = 'none'; return; }
+  pal.style.display = 'flex';
+  let colors, key;
+  if (tab.palette === 'skin')      { colors = AVATAR.SKIN_TONES;   key = 'skin'; }
+  else if (tab.palette === 'hair') { colors = AVATAR.HAIR_COLORS;  key = 'hairColor'; }
+  else                              { colors = AVATAR.SHIRT_COLORS; key = 'shirtColor'; }
+  for (const c of colors) {
+    const sw = document.createElement('div');
+    sw.className = 'pm-swatch' + (_pmProfile[key] === c ? ' selected' : '');
+    sw.style.background = c;
+    sw.onclick = () => { _pmProfile[key] = c; pmRenderAll(); };
+    pal.appendChild(sw);
+  }
+}
+function pmRenderAll() { pmRenderAvatar(); pmRenderGrid(); pmRenderPalette(); pmRenderTabs(); }
+
+function pmPick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function pmPickItemReal(items) { return pmPick(items.filter(i => (i.label || '').toLowerCase() !== 'none')).id; }
+$('pm-random').onclick = () => {
+  _pmProfile.face  = pmPickItemReal(AVATAR.FACE_SHAPES);
+  _pmProfile.hair  = pmPickItemReal(AVATAR.HAIR_STYLES);
+  _pmProfile.eyes  = pmPickItemReal(AVATAR.EYES);
+  _pmProfile.brows = pmPickItemReal(AVATAR.BROWS);
+  _pmProfile.mouth = pmPickItemReal(AVATAR.MOUTHS);
+  _pmProfile.nose  = pmPickItemReal(AVATAR.NOSES);
+  _pmProfile.shirt = pmPickItemReal(AVATAR.SHIRTS);
+  _pmProfile.beard = pmPick(AVATAR.BEARDS).id;
+  _pmProfile.glass = pmPick(AVATAR.GLASSES).id;
+  _pmProfile.hat   = pmPick(AVATAR.HATS).id;
+  _pmProfile.skin       = pmPick(AVATAR.SKIN_TONES);
+  _pmProfile.hairColor  = pmPick(AVATAR.HAIR_COLORS);
+  _pmProfile.shirtColor = pmPick(AVATAR.SHIRT_COLORS);
+  pmRenderAll();
+};
 $('pm-cancel').onclick = async () => {
   await renderAchievement();
   showScreen('screen-achievement');
