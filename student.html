@@ -715,10 +715,13 @@ function pmRenderPalette() {
   const pal = $('pm-palette'); pal.innerHTML = '';
   if (!tab.palette) { pal.style.display = 'none'; return; }
   pal.style.display = 'flex';
+  // Each palette type maps to its own state key + colour list
   let colors, key;
-  if (tab.palette === 'skin')      { colors = AVATAR.SKIN_TONES;   key = 'skin'; }
-  else if (tab.palette === 'hair') { colors = AVATAR.HAIR_COLORS;  key = 'hairColor'; }
-  else                              { colors = AVATAR.SHIRT_COLORS; key = 'shirtColor'; }
+  if      (tab.palette === 'skin')  { colors = AVATAR.SKIN_TONES;   key = 'skin'; }
+  else if (tab.palette === 'hair')  { colors = AVATAR.HAIR_COLORS;  key = 'hairColor'; }
+  else if (tab.palette === 'beard') { colors = AVATAR.HAIR_COLORS;  key = 'beardColor'; }
+  else if (tab.palette === 'hat')   { colors = AVATAR.SHIRT_COLORS; key = 'hatColor'; }
+  else                               { colors = AVATAR.SHIRT_COLORS; key = 'shirtColor'; }
   for (const c of colors) {
     const sw = document.createElement('div');
     sw.className = 'pm-swatch' + (_pmProfile[key] === c ? ' selected' : '');
@@ -744,6 +747,8 @@ $('pm-random').onclick = () => {
   _pmProfile.hat   = pmPick(AVATAR.HATS).id;
   _pmProfile.skin       = pmPick(AVATAR.SKIN_TONES);
   _pmProfile.hairColor  = pmPick(AVATAR.HAIR_COLORS);
+  _pmProfile.beardColor = pmPick(AVATAR.HAIR_COLORS);
+  _pmProfile.hatColor   = pmPick(AVATAR.SHIRT_COLORS);
   _pmProfile.shirtColor = pmPick(AVATAR.SHIRT_COLORS);
   pmRenderAll();
 };
