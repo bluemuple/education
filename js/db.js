@@ -225,18 +225,46 @@
     ls.set('device_logins', ls.get('device_logins',[])
       .filter(d => !(d.student_id === student_id && d.device_id === device_id)));
   }
-  async function listDeviceCounts() {
-    // Returns { studentId: numberOfDistinctDevices }
+  // How long a device-login row is considered "fresh" / actively logged in.
+  // Sessions whose last_seen_at is older than this are ignored when counting,
+  // so a student who closes their laptop drops out of the multi-device warning
+  // automatically once enough time has passed.
+  const FRESH_LOGIN_MS = 30 * 60 * 1000; // 30 minutes
+
+  async function listDeviceCounts(opts) {
+    // opts.staleMs (optional): override the freshness window in ms.
+    const ms = (opts && typeof opts.staleMs === 'number') ? opts.staleMs : FRESH_LOGIN_MS;
     if (useSupabase) {
-      const { data, error } = await sb.from('device_logins').select('student_id,device_id');
+      const cutoff = new Date(Date.now() - ms).toISOString();
+      const { data, error } = await sb.from('device_logins')
+        .select('student_id,device_id,last_seen_at')
+        .gte('last_seen_at', cutoff);
       logErr('listDeviceCounts', error);
       const counts = {};
       for (const r of (data || [])) counts[r.student_id] = (counts[r.student_id]||0) + 1;
       return counts;
     }
     const counts = {};
-    for (const r of ls.get('device_logins', [])) counts[r.student_id] = (counts[r.student_id]||0) + 1;
+    const cutoffMs = Date.now() - ms;
+    for (const r of ls.get('device_logins', [])) {
+      const t = new Date(r.last_seen_at || 0).getTime();
+      if (t >= cutoffMs) counts[r.student_id] = (counts[r.student_id]||0) + 1;
+    }
     return counts;
+  }
+
+  // Optional: deletes device-login rows older than `ms` (default 24h) to keep
+  // the table from growing forever. Called opportunistically by the teacher panel.
+  async function pruneStaleLogins(ms) {
+    const cutoffMs = ms == null ? 24 * 60 * 60 * 1000 : ms;
+    const cutoff = new Date(Date.now() - cutoffMs).toISOString();
+    if (useSupabase) {
+      const { error } = await sb.from('device_logins').delete().lt('last_seen_at', cutoff);
+      logErr('pruneStaleLogins', error);
+      return;
+    }
+    ls.set('device_logins', ls.get('device_logins', [])
+      .filter(r => new Date(r.last_seen_at || 0).getTime() >= Date.now() - cutoffMs));
   }
 
   // ===================== COMPLETIONS (practice / game1 unlock) =====================
@@ -376,7 +404,7 @@
     listGames, updateGame, addCustomGame, deleteGame,
     recordScore, listScores, listScoresFor,
     markCompleted, hasCompleted,
-    recordStudentLogin, removeStudentLogin, listDeviceCounts,
+    recordStudentLogin, removeStudentLogin, listDeviceCounts, pruneStaleLogins,
     getStudentProfile, setStudentProfile, getEarnedBadges,
     exportJSON, importJSON, clearAll,
   };
