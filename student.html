@@ -668,7 +668,7 @@ async function renderAchievement() {
   if (DB.getEarnedBadges) {
     try { earned = await DB.getEarnedBadges(state.studentId); } catch(e){ earned = new Set(); }
   }
-  const BADGES_BASE = '2d/badges/2D%20Shapes';
+  const BADGES_BASE = 'Badges/2D%20Shapes';
   if (!earned.size) {
     const card = document.createElement('div');
     card.className = 'badge-card';
