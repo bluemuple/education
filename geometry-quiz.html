@@ -1301,7 +1301,9 @@ async function recordPracticeScore() {
     const games = await DB.listGames();
     const practiceGame = (games || []).find(g => g.slot === 'practice');
     if (!practiceGame) return;
-    await DB.recordScore(studentId, practiceGame.id, state.correct);
+    const correct = state.correct;
+    const wrong   = Math.max(0, state.qCount - state.correct);
+    await DB.recordScore(studentId, practiceGame.id, correct, correct, wrong);
   } catch (err) {
     console.warn('Could not record practice score:', err);
   }

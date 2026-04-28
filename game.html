@@ -212,6 +212,8 @@ let state = {
   level: 2,            // start middle of L1-L5
   qNum: 0,
   score: 0,
+  correctCount: 0,
+  wrongCount: 0,
   asked: new Set(),
   currentQ: null,
   selected: null,
@@ -402,11 +404,13 @@ function submitAnswer() {
     }
   });
 
-  // points + level adjust
+  // points + level adjust + correct/wrong tally
   if (correct) {
     state.score += window.LEVEL_POINTS[q.level];
+    state.correctCount++;
     if (state.level < 5) state.level++;
   } else {
+    state.wrongCount++;
     if (state.level > 1) state.level--;
   }
   $('score').textContent = state.score;
@@ -432,8 +436,8 @@ function submitAnswer() {
 async function finish() {
   state.finished = true;
   if (tickHandle) clearInterval(tickHandle);
-  // record score
-  await DB.recordScore(STUDENT_ID, GAME_ID, state.score);
+  // record score (with correct + wrong counts)
+  await DB.recordScore(STUDENT_ID, GAME_ID, state.score, state.correctCount, state.wrongCount);
   // mark game1 completion if applicable
   if (game.slot === 'game1') await DB.markCompleted(STUDENT_ID, 'game1');
 

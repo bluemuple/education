@@ -182,7 +182,7 @@
       <div class="card">
         <h3 style="margin:0 0 10px;">Latest scores</h3>
         <table class="tbl" id="stats-recent">
-          <thead><tr><th>When</th><th>Student</th><th>Game</th><th>Score</th></tr></thead>
+          <thead><tr><th>When</th><th>Student</th><th>Game</th><th>Score</th><th>✅</th><th>❌</th><th>%</th></tr></thead>
           <tbody></tbody>
         </table>
         <p class="empty hidden" id="stats-recent-empty">No scores recorded yet.</p>
@@ -350,10 +350,14 @@ async function refreshStats() {
   for (const s of recent) {
     const tr = document.createElement('tr');
     const stu = stuById[s.student_id]; const g = gameById[s.game_id];
+    const pct = pctOf(s.correct, s.wrong);
     tr.innerHTML = `<td>${formatDate(s.played_at)}</td>
                     <td>${escapeHtml(stu?stu.name:'(deleted)')}</td>
                     <td>${escapeHtml(g?g.name:'(deleted)')}</td>
-                    <td><b>${s.score}</b></td>`;
+                    <td><b>${s.score}</b></td>
+                    <td>${s.correct ?? '—'}</td>
+                    <td>${s.wrong ?? '—'}</td>
+                    <td>${pct == null ? '—' : pct + '%'}</td>`;
     tbody.appendChild(tr);
   }
   // By game ranking (exclude practice game)
@@ -404,16 +408,27 @@ async function refreshStats() {
       const block = document.createElement('div');
       block.style.marginBottom = '18px';
       const rounds = byStudent[sid];
-      const totalCorrect = rounds.reduce((a,b) => a + (b.score||0), 0);
+      const totalC = rounds.reduce((a,b) => a + (b.correct != null ? b.correct : (b.score||0)), 0);
+      const totalW = rounds.reduce((a,b) => a + (b.wrong != null ? b.wrong : 0), 0);
+      const overallPct = pctOf(totalC, totalW);
       block.innerHTML = `<h4 style="margin:6px 0 6px;">${escapeHtml(stu?stu.name:'(deleted)')}
-        <span style="font-size:13px; font-weight:700; color:var(--muted);">— ${rounds.length} round${rounds.length===1?'':'s'}, ${totalCorrect} total correct</span></h4>`;
+        <span style="font-size:13px; font-weight:700; color:var(--muted);">
+          — ${rounds.length} round${rounds.length===1?'':'s'},
+          ✅ ${totalC} · ❌ ${totalW}${overallPct == null ? '' : ' · ' + overallPct + '% correct'}
+        </span></h4>`;
       const tbl = document.createElement('table'); tbl.className = 'tbl';
-      tbl.innerHTML = '<thead><tr><th>Date</th><th>Correct answers</th></tr></thead><tbody></tbody>';
+      tbl.innerHTML = '<thead><tr><th>Date</th><th>✅ Correct</th><th>❌ Wrong</th><th>%</th></tr></thead><tbody></tbody>';
       const tb = tbl.querySelector('tbody');
       const sorted = [...rounds].sort((a,b) => (b.played_at||'').localeCompare(a.played_at||''));
       for (const s of sorted) {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${formatDate(s.played_at)}</td><td><b>${s.score}</b></td>`;
+        const c = s.correct != null ? s.correct : s.score;
+        const w = s.wrong   != null ? s.wrong   : null;
+        const pct = pctOf(c, w);
+        tr.innerHTML = `<td>${formatDate(s.played_at)}</td>
+                        <td><b>${c}</b></td>
+                        <td>${w == null ? '—' : w}</td>
+                        <td>${pct == null ? '—' : pct + '%'}</td>`;
         tb.appendChild(tr);
       }
       block.appendChild(tbl);
@@ -425,6 +440,13 @@ function formatDate(s) {
   if (!s) return '';
   const d = new Date(s);
   return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
+}
+// Returns null when correct/wrong are unknown, otherwise a 0-100 integer.
+function pctOf(correct, wrong) {
+  if (correct == null || wrong == null) return null;
+  const total = (correct|0) + (wrong|0);
+  if (total <= 0) return null;
+  return Math.round(((correct|0) / total) * 100);
 }
 function escapeHtml(s) { return (s||'').toString().replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
 
