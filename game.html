@@ -439,10 +439,15 @@ async function finish() {
   state.finished = true;
   if (tickHandle) clearInterval(tickHandle);
 
-  // ── Switch to the end screen IMMEDIATELY using values we already have in
-  //    memory (score, questions answered, level reached). The DB writes and the
-  //    rank tables fill in afterwards, asynchronously, so the timer-up moment
-  //    feels instant.
+  // ── 1) Persist the score FIRST (in parallel with markCompleted for game1)
+  //    so the data is safely in Supabase even if the student clicks Back/Play
+  //    again the moment the end screen appears. Two parallel writes are fast
+  //    (typically <500 ms), so the screen-swap still feels nearly instant.
+  const writes = [DB.recordScore(STUDENT_ID, GAME_ID, state.score, state.correctCount, state.wrongCount)];
+  if (game.slot === 'game1') writes.push(DB.markCompleted(STUDENT_ID, 'game1'));
+  try { await Promise.allSettled(writes); } catch(e) { console.warn('finish writes failed:', e); }
+
+  // ── 2) Now swap to the end screen with the score we know
   $('end-score').textContent = state.score;
   $('end-stats').textContent = `${state.qNum} questions answered · highest level reached: L${maxLevelHit()}`;
   $('end-sub').textContent = encouragement(state.score);
@@ -453,10 +458,6 @@ async function finish() {
   $('screen-end').classList.remove('hidden');
   // Render avatar at the top of the end card
   renderEndAvatar();
-
-  // Now do the heavy work in the background
-  try { await DB.recordScore(STUDENT_ID, GAME_ID, state.score, state.correctCount, state.wrongCount); } catch(e){}
-  if (game.slot === 'game1') { try { await DB.markCompleted(STUDENT_ID, 'game1'); } catch(e){} }
 
   // Personal rank table
   try {
