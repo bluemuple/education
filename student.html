@@ -382,6 +382,7 @@ $('confirm-yes').onclick = async () => {
     try { await DB.recordStudentLogin(state.studentId); }
     catch (err) { console.warn('recordStudentLogin failed:', err); }
   }
+  startHeartbeat();
   state.practiceDone = await DB.hasCompleted(state.studentId, 'practice');
   state.game1Done    = await DB.hasCompleted(state.studentId, 'game1');
   state.games        = await DB.listGames();
@@ -390,6 +391,8 @@ $('confirm-yes').onclick = async () => {
   await renderAchievement();
   showScreen('screen-achievement');
   // Check device count for this student — show alert if > 1
+  // (Only counts sessions that have pinged within FRESH_LOGIN_MS, so old/closed
+  //  laptops drop out automatically.)
   if (DB.listDeviceCounts) {
     try {
       const counts = await DB.listDeviceCounts();
@@ -567,12 +570,32 @@ function formatDate(s) {
 async function signOut() {
   // Drop the device-login row so the teacher's "⚠ N devices" badge updates
   const sid = state.studentId;
+  stopHeartbeat();
   if (sid && DB.removeStudentLogin) {
     try { await DB.removeStudentLogin(sid); } catch(e){}
   }
   state.studentId = null; state.studentName = null; state.gender = null;
   clearSession(); updateWhoStrip();
   showScreen('screen-gender');
+}
+
+// ---------- heartbeat ----------
+// While the student is logged in AND the page is visible, refresh the
+// device_logins.last_seen_at every minute so the teacher panel knows this
+// session is still active. When the laptop is closed or the student walks away,
+// the browser pauses these timers — last_seen_at goes stale and the multi-device
+// warning automatically clears itself after FRESH_LOGIN_MS (5 min).
+let _heartbeat = null;
+function startHeartbeat() {
+  stopHeartbeat();
+  _heartbeat = setInterval(() => {
+    if (!state.studentId || !DB.recordStudentLogin) return;
+    if (document.hidden) return;  // skip while tab in background
+    try { DB.recordStudentLogin(state.studentId); } catch(e){}
+  }, 60 * 1000);
+}
+function stopHeartbeat() {
+  if (_heartbeat) { clearInterval(_heartbeat); _heartbeat = null; }
 }
 
 // ---------- idle auto-logout ----------
@@ -775,6 +798,9 @@ $('pm-save').onclick = async () => {
     const found = state.students.find(s => s.id === sess.id);
     if (found) {
       state.gender = found.gender; state.studentId = found.id; state.studentName = found.name;
+      // Refresh device-login timestamp + start heartbeat for the resumed session
+      if (DB.recordStudentLogin) { try { await DB.recordStudentLogin(found.id); } catch(e){} }
+      startHeartbeat();
       state.practiceDone = await DB.hasCompleted(found.id, 'practice');
       state.game1Done    = await DB.hasCompleted(found.id, 'game1');
       state.games        = await DB.listGames();
