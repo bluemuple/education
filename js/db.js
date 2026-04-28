@@ -211,6 +211,20 @@
     else list.push({ id: uid(), student_id, device_id, last_seen_at: now });
     ls.set('device_logins', list);
   }
+  async function removeStudentLogin(student_id, device_id) {
+    if (!student_id) return;
+    device_id = device_id || getOrCreateDeviceId();
+    if (useSupabase) {
+      const { error } = await sb.from('device_logins')
+        .delete()
+        .eq('student_id', student_id)
+        .eq('device_id',  device_id);
+      logErr('removeStudentLogin', error);
+      return;
+    }
+    ls.set('device_logins', ls.get('device_logins',[])
+      .filter(d => !(d.student_id === student_id && d.device_id === device_id)));
+  }
   async function listDeviceCounts() {
     // Returns { studentId: numberOfDistinctDevices }
     if (useSupabase) {
@@ -247,6 +261,95 @@
     return !!ls.get('completions', []).find(c => c.student_id === student_id && c.kind === kind);
   }
 
+  // ===================== STUDENT PROFILES =====================
+  async function getStudentProfile(student_id) {
+    if (!student_id) return null;
+    if (useSupabase) {
+      const { data, error } = await sb.from('students').select('profile').eq('id', student_id).maybeSingle();
+      logErr('getStudentProfile', error);
+      try { return data && data.profile ? JSON.parse(data.profile) : null; } catch(e) { return null; }
+    }
+    const stu = (ls.get('students',[]).find(s => s.id === student_id));
+    try { return stu && stu.profile ? JSON.parse(stu.profile) : null; } catch(e) { return null; }
+  }
+  async function setStudentProfile(student_id, profile) {
+    if (!student_id) return;
+    const text = JSON.stringify(profile || {});
+    if (useSupabase) {
+      const { error } = await sb.from('students').update({ profile: text }).eq('id', student_id);
+      logErr('setStudentProfile', error);
+      return;
+    }
+    const list = ls.get('students', []);
+    const i = list.findIndex(s => s.id === student_id);
+    if (i >= 0) { list[i].profile = text; ls.set('students', list); }
+  }
+
+  // ===================== BADGE COMPUTATION =====================
+  // Returns Set of badge ids the student has earned, based on score history.
+  // Badge rules:
+  //   practice_makes_perfect — at least 1 practice round recorded
+  //   better_me              — at least 2 game scores in any single game (game1/game2/custom)
+  //   even_better_me         — latest score in any game beat that student's previous best in the same game
+  //   challenge              — at least 1 game2 ('Me vs the Class') play
+  //   warrior                — top 3 (best score per student) in any game1/game2/custom game
+  //   effort                 — total of (practice + game) plays ≥ 7
+  async function getEarnedBadges(student_id) {
+    const earned = new Set();
+    if (!student_id) return earned;
+    const [scores, games, students] = await Promise.all([
+      listScores(), listGames(), listStudents(),
+    ]);
+    const practiceGame = (games || []).find(g => g.slot === 'practice');
+    const myScores = (scores || []).filter(s => s.student_id === student_id);
+    if (!myScores.length) return earned;
+
+    const isPractice = (s) => practiceGame && s.game_id === practiceGame.id;
+    const myPractice = myScores.filter(isPractice);
+    const myGame     = myScores.filter(s => !isPractice(s));
+
+    // practice_makes_perfect
+    if (myPractice.length >= 1) earned.add('practice_makes_perfect');
+
+    // better_me — at least 2 scores in same game
+    const byGame = {};
+    for (const s of myGame) (byGame[s.game_id] = byGame[s.game_id] || []).push(s);
+    if (Object.values(byGame).some(arr => arr.length >= 2)) earned.add('better_me');
+
+    // even_better_me — latest score beat their previous best in same game
+    for (const arr of Object.values(byGame)) {
+      if (arr.length < 2) continue;
+      const sorted = [...arr].sort((a,b) => (a.played_at||'').localeCompare(b.played_at||''));
+      const latest = sorted[sorted.length - 1];
+      const prevBest = Math.max(...sorted.slice(0, -1).map(x => x.score|0));
+      if ((latest.score|0) > prevBest) { earned.add('even_better_me'); break; }
+    }
+
+    // challenge — played game2
+    const game2 = (games || []).find(g => g.slot === 'game2');
+    if (game2 && myGame.some(s => s.game_id === game2.id)) earned.add('challenge');
+
+    // warrior — top 3 best per student in any game1/game2/custom game
+    for (const g of (games || [])) {
+      if (g.slot === 'practice') continue;
+      const gscores = (scores || []).filter(s => s.game_id === g.id);
+      if (!gscores.length) continue;
+      const best = {};
+      for (const s of gscores) {
+        if (!best[s.student_id] || s.score > best[s.student_id].score) best[s.student_id] = s;
+      }
+      const ranking = Object.values(best).sort((a,b) => b.score - a.score);
+      if (ranking.slice(0, 3).some(s => s.student_id === student_id)) {
+        earned.add('warrior'); break;
+      }
+    }
+
+    // effort — total plays ≥ 7
+    if (myScores.length >= 7) earned.add('effort');
+
+    return earned;
+  }
+
   // ===================== Util =====================
   function exportJSON() {
     return {
@@ -273,7 +376,8 @@
     listGames, updateGame, addCustomGame, deleteGame,
     recordScore, listScores, listScoresFor,
     markCompleted, hasCompleted,
-    recordStudentLogin, listDeviceCounts,
+    recordStudentLogin, removeStudentLogin, listDeviceCounts,
+    getStudentProfile, setStudentProfile, getEarnedBadges,
     exportJSON, importJSON, clearAll,
   };
 })();
