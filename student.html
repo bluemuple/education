@@ -109,6 +109,8 @@
   }
   .ach-avatar svg { width:100%; height:100%; display:block; }
   .ach-edit-tip { font-size:12px; font-weight:800; color:var(--primary-ink); }
+  .gender-avatar { display:flex; align-items:center; justify-content:center; width:100%; height:100%; line-height:1; }
+  .ach-avatar.locked { cursor:default; }
   .ach-name { font-size:24px; font-weight:900; }
   .ach-section h3 { margin:18px 0 8px; font-size:18px; }
   .play-row { display:flex; flex-wrap:wrap; gap:10px; }
@@ -318,6 +320,7 @@ let state = {
   games: [],
   practiceDone: false,
   game1Done: false,
+  game2Done: false,    // unlocks profile-editing
 };
 
 // On returning from a quiz, restore the chosen student
@@ -388,6 +391,7 @@ $('confirm-yes').onclick = async () => {
   startHeartbeat();
   state.practiceDone = await DB.hasCompleted(state.studentId, 'practice');
   state.game1Done    = await DB.hasCompleted(state.studentId, 'game1');
+  state.game2Done    = await DB.hasCompleted(state.studentId, 'game2');
   state.games        = await DB.listGames();
   updateWhoStrip();
   // Land on the Achievement page first (avatar, Let's Play, Badges)
@@ -469,6 +473,13 @@ async function renderPage2() {
 async function renderPage2Avatar() {
   const slot = document.getElementById('page2-avatar');
   if (!slot || !window.AVATAR) return;
+  // Locked until Game 2 done — show the gender emoji
+  if (!state.game2Done) {
+    const isBoy = state.gender === 'boy';
+    slot.style.background = isBoy ? '#cfeafd' : '#ffd6e6';
+    slot.innerHTML = `<div class="gender-avatar" style="font-size:64px;">${isBoy ? '👦' : '👧'}</div>`;
+    return;
+  }
   let profile = null;
   if (state.studentId && DB.getStudentProfile) {
     try { profile = await DB.getStudentProfile(state.studentId); } catch(e){}
@@ -699,20 +710,34 @@ function showBadgeModal(def) {
 }
 async function renderAchievement() {
   $('ach-name').textContent = state.studentName || '';
-  // Avatar — if the student hasn't picked one yet, show no-profile.png; if
-  // that file is missing, fall back to the default SVG avatar.
-  const profile = (DB.getStudentProfile ? await DB.getStudentProfile(state.studentId) : null);
   const av = $('ach-avatar');
-  if (profile) {
-    av.style.background = '#fff';
-    av.innerHTML = AVATAR.render(profile);
+  const tip = document.querySelector('.ach-edit-tip');
+  // Profile customisation is locked until the student finishes Game 2.
+  const unlocked = !!state.game2Done;
+  if (tip) {
+    tip.style.display = '';
+    tip.textContent = unlocked
+      ? '👆 tap the picture to edit'
+      : '🎨 Beat Game 2 to unlock your own avatar maker!';
+  }
+  av.classList.toggle('locked', !unlocked);
+  if (!unlocked) {
+    // Show big gender emoji at the same size as the avatar tile
+    const isBoy = state.gender === 'boy';
+    av.style.background = isBoy ? '#cfeafd' : '#ffd6e6';
+    av.innerHTML = `<div class="gender-avatar" style="font-size:130px;">${isBoy ? '👦' : '👧'}</div>`;
   } else {
-    const fallback = AVATAR.render(AVATAR.DEFAULT)
-      .replace(/"/g, '&quot;');
-    av.style.background = '#1a1a1a';        // matches the dark image so any seam is invisible
-    av.innerHTML = `<img src="2d/no-profile.png" alt="No avatar yet"
-        style="width:100%; height:100%; display:block; object-fit:cover; border-radius:18px;"
-        onerror="this.parentNode.style.background='#fff'; this.parentNode.innerHTML='${fallback}'" />`;
+    const profile = (DB.getStudentProfile ? await DB.getStudentProfile(state.studentId) : null);
+    if (profile) {
+      av.style.background = '#fff';
+      av.innerHTML = AVATAR.render(profile);
+    } else {
+      const fallback = AVATAR.render(AVATAR.DEFAULT).replace(/"/g, '&quot;');
+      av.style.background = '#1a1a1a';
+      av.innerHTML = `<img src="2d/no-profile.png" alt="No avatar yet"
+          style="width:100%; height:100%; display:block; object-fit:cover; border-radius:18px;"
+          onerror="this.parentNode.style.background='#fff'; this.parentNode.innerHTML='${fallback}'" />`;
+    }
   }
   // Badges
   const grid = $('badge-grid'); grid.innerHTML = '';
@@ -747,7 +772,10 @@ $('play-2dshapes').onclick = async () => {
   await renderPage2();
   showScreen('screen-page2');
 };
-$('ach-avatar').onclick = openProfileMaker;
+$('ach-avatar').onclick = () => {
+  if (!state.game2Done) return;   // locked until Game 2 is completed
+  openProfileMaker();
+};
 
 // ---------- Profile maker (matches uploaded reference) ----------
 let _pmProfile = null;
@@ -859,6 +887,7 @@ $('pm-save').onclick = async () => {
       startHeartbeat();
       state.practiceDone = await DB.hasCompleted(found.id, 'practice');
       state.game1Done    = await DB.hasCompleted(found.id, 'game1');
+      state.game2Done    = await DB.hasCompleted(found.id, 'game2');
       state.games        = await DB.listGames();
       updateWhoStrip();
       // ?go=game1 (or game2) → auto-launch that game if it's unlocked

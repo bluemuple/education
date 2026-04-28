@@ -1387,14 +1387,36 @@ function showEnd(msg) {
 }
 
 // Render the student's saved avatar at the top of the practice end screen.
+// Locked until Game 2 is completed — until then we show the gender emoji at
+// avatar size, matching the look on student.html.
 async function renderPracticeEndAvatar() {
   const slot = document.getElementById('end-avatar');
   if (!slot || !window.AVATAR) return;
   const studentId = new URLSearchParams(location.search).get('student');
+  if (!studentId || !window.DB) return;
+
+  let game2Done = false;
+  let gender = 'girl';
+  try {
+    if (DB.hasCompleted) game2Done = await DB.hasCompleted(studentId, 'game2');
+    if (DB.listStudents) {
+      const stu = (await DB.listStudents()).find(s => s.id === studentId);
+      if (stu) gender = stu.gender || 'girl';
+    }
+  } catch(e){}
+
+  if (!game2Done) {
+    const isBoy = gender === 'boy';
+    slot.style.background = isBoy ? '#cfeafd' : '#ffd6e6';
+    slot.innerHTML = `<div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%; font-size:96px; line-height:1;">${isBoy ? '👦' : '👧'}</div>`;
+    return;
+  }
+
   let profile = null;
-  if (studentId && window.DB && DB.getStudentProfile) {
+  if (DB.getStudentProfile) {
     try { profile = await DB.getStudentProfile(studentId); } catch(e){}
   }
+  slot.style.background = '#fff';
   if (profile) slot.innerHTML = window.AVATAR.render(profile);
   else slot.innerHTML = `<img src="2d/no-profile.png" alt="" style="width:100%; height:100%; object-fit:cover; border-radius:14px;"
                               onerror="this.parentNode.innerHTML='${window.AVATAR.render(window.AVATAR.DEFAULT).replace(/"/g,'&quot;')}'" />`;

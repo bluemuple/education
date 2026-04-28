@@ -445,6 +445,7 @@ async function finish() {
   //    (typically <500 ms), so the screen-swap still feels nearly instant.
   const writes = [DB.recordScore(STUDENT_ID, GAME_ID, state.score, state.correctCount, state.wrongCount)];
   if (game.slot === 'game1') writes.push(DB.markCompleted(STUDENT_ID, 'game1'));
+  if (game.slot === 'game2') writes.push(DB.markCompleted(STUDENT_ID, 'game2'));
   try { await Promise.allSettled(writes); } catch(e) { console.warn('finish writes failed:', e); }
 
   // ── 2) Now swap to the end screen with the score we know
@@ -515,11 +516,26 @@ async function finish() {
 }
 
 // Renders the student's saved avatar at the top of the end screen.
+// Locked behind Game 2 completion — before that we show the gender emoji.
+// Note: if the student is finishing Game 2 right now, markCompleted has already
+// run before this function, so the unlock will reflect immediately.
 async function renderEndAvatar() {
   const slot = document.getElementById('end-avatar');
   if (!slot || !window.AVATAR) return;
+  let game2Done = false;
+  try { if (DB.hasCompleted) game2Done = await DB.hasCompleted(STUDENT_ID, 'game2'); } catch(e){}
+
+  if (!game2Done) {
+    const gender = (student && student.gender) || 'girl';
+    const isBoy = gender === 'boy';
+    slot.style.background = isBoy ? '#cfeafd' : '#ffd6e6';
+    slot.innerHTML = `<div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%; font-size:96px; line-height:1;">${isBoy ? '👦' : '👧'}</div>`;
+    return;
+  }
+
   let profile = null;
   try { if (DB.getStudentProfile) profile = await DB.getStudentProfile(STUDENT_ID); } catch(e){}
+  slot.style.background = '#fff';
   if (profile) slot.innerHTML = window.AVATAR.render(profile);
   else slot.innerHTML = `<img src="2d/no-profile.png" alt="" style="width:100%; height:100%; object-fit:cover; border-radius:14px;"
                               onerror="this.parentNode.innerHTML='${window.AVATAR.render(window.AVATAR.DEFAULT).replace(/"/g,'&quot;')}'" />`;
