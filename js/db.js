@@ -131,10 +131,20 @@
   }
 
   // ===================== SCORES =====================
-  async function recordScore(student_id, game_id, score) {
-    const row = { student_id, game_id, score: score|0, played_at: new Date().toISOString() };
+  // recordScore can be called as either:
+  //   recordScore(student_id, game_id, score)
+  //   recordScore(student_id, game_id, score, correct, wrong)
+  async function recordScore(student_id, game_id, score, correct, wrong) {
+    const row = {
+      student_id, game_id,
+      score: score|0,
+      played_at: new Date().toISOString(),
+    };
+    if (correct != null) row.correct = correct|0;
+    if (wrong   != null) row.wrong   = wrong|0;
     if (useSupabase) {
-      const { data } = await sb.from('scores').insert(row).select().single();
+      const { data, error } = await sb.from('scores').insert(row).select().single();
+      logErr('recordScore', error);
       return data;
     }
     const list = ls.get('scores', []);
@@ -171,11 +181,28 @@
     const device_id = getOrCreateDeviceId();
     const now = new Date().toISOString();
     if (useSupabase) {
+      // Try upsert first; if onConflict is somehow unsupported by the deployment,
+      // fall back to: select existing row → insert if missing, otherwise update last_seen.
       const { error } = await sb.from('device_logins').upsert(
         { student_id, device_id, last_seen_at: now },
         { onConflict: 'student_id,device_id' }
       );
-      logErr('recordStudentLogin', error);
+      if (error) {
+        logErr('recordStudentLogin (upsert)', error);
+        // Fallback path
+        const { data: existing, error: selErr } = await sb.from('device_logins')
+          .select('id').eq('student_id', student_id).eq('device_id', device_id).maybeSingle();
+        if (selErr) logErr('recordStudentLogin (select)', selErr);
+        if (existing) {
+          const { error: upErr } = await sb.from('device_logins')
+            .update({ last_seen_at: now }).eq('id', existing.id);
+          if (upErr) logErr('recordStudentLogin (update)', upErr);
+        } else {
+          const { error: insErr } = await sb.from('device_logins')
+            .insert({ student_id, device_id, last_seen_at: now });
+          if (insErr) logErr('recordStudentLogin (insert)', insErr);
+        }
+      }
       return;
     }
     const list = ls.get('device_logins', []);
