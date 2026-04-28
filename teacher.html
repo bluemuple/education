@@ -134,7 +134,7 @@
 
       <div class="card">
         <table class="tbl">
-          <thead><tr><th>Name</th><th>Gender</th><th></th></tr></thead>
+          <thead><tr><th>Name</th><th>Gender</th><th>🏅 Badges</th><th></th></tr></thead>
           <tbody id="stu-rows"></tbody>
         </table>
         <p class="empty hidden" id="stu-empty">No students yet — add one above.</p>
@@ -256,22 +256,52 @@ async function wipeAllStudentData() {
 }
 $('stu-reset').onclick   = wipeAllStudentData;
 $('stats-reset').onclick = wipeAllStudentData;
+// Badge metadata used to render thumbnails next to each student.
+const BADGE_DEFS_TEACHER = [
+  { id:'practice_makes_perfect', label:'Practice Makes Perfect', img:'badge_practice_makes_perfect.png', emoji:'📚' },
+  { id:'better_me',              label:'Better Me',              img:'badge_better_me.png',              emoji:'🌱' },
+  { id:'even_better_me',         label:'Even Better Me',         img:'badge_even_better_me.png',         emoji:'🚀' },
+  { id:'challenge',              label:'Challenge',              img:'badge_challenge.png',              emoji:'⚔️' },
+  { id:'warrior',                label:'Warrior',                img:'badge_warrior.png',                emoji:'🥇' },
+  { id:'effort',                 label:'Effort',                 img:'badge_effort.png',                 emoji:'💪' },
+];
+const BADGES_PATH = '2d/badges/2D%20Shapes';
+
+function renderBadgeRow(earnedSet) {
+  if (!earnedSet || !earnedSet.size) return '<span style="color:#aaa;">—</span>';
+  let html = '<div style="display:flex; gap:4px; flex-wrap:wrap; align-items:center;">';
+  for (const def of BADGE_DEFS_TEACHER) {
+    if (!earnedSet.has(def.id)) continue;
+    html += `<img src="${BADGES_PATH}/${escapeHtml(def.img)}" alt="${escapeHtml(def.label)}" title="${escapeHtml(def.label)}"
+              style="width:34px; height:34px; object-fit:contain;"
+              onerror="this.replaceWith(Object.assign(document.createElement('span'),{innerHTML:'${def.emoji}',title:${JSON.stringify(def.label)},style:'font-size:24px;'}))" />`;
+  }
+  html += '</div>';
+  return html;
+}
+
 async function refreshStudents() {
   _students = await DB.listStudents();
-  const deviceCounts = (DB.listDeviceCounts ? await DB.listDeviceCounts() : {}) || {};
+  // Fetch device counts + earned badges for every student in one round-trip
+  const [deviceCounts, allBadges] = await Promise.all([
+    (DB.listDeviceCounts    ? DB.listDeviceCounts()    : Promise.resolve({})),
+    (DB.getEarnedBadgesAll  ? DB.getEarnedBadgesAll()  : Promise.resolve({})),
+  ]);
   const tbody = $('stu-rows'); tbody.innerHTML = '';
   $('stu-empty').classList.toggle('hidden', _students.length > 0);
   _students.sort((a,b) => a.name.localeCompare(b.name));
   for (const s of _students) {
     const tr = document.createElement('tr');
-    const count = deviceCounts[s.id] || 0;
+    const count = (deviceCounts || {})[s.id] || 0;
     let badge = '';
     if (count > 1) {
       badge = ` <span class="dev-badge" title="This name has been used on ${count} different devices/browsers">⚠ ${count} devices</span>`;
     }
+    const earned = (allBadges || {})[s.id] || new Set();
     tr.innerHTML = `
       <td><b>${escapeHtml(s.name)}</b>${badge}</td>
       <td>${s.gender === 'boy' ? '👦 Boy' : '👧 Girl'}</td>
+      <td>${renderBadgeRow(earned)}</td>
       <td style="text-align:right;"><button class="btn small danger">Delete</button></td>`;
     tr.querySelector('button').onclick = async () => {
       if (!confirm(`Remove ${s.name}? Their scores will be deleted too.`)) return;
