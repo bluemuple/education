@@ -1300,10 +1300,16 @@ async function recordPracticeScore() {
     if (!studentId || !window.DB) return;
     const games = await DB.listGames();
     const practiceGame = (games || []).find(g => g.slot === 'practice');
-    if (!practiceGame) return;
-    const correct = state.correct;
-    const wrong   = Math.max(0, state.qCount - state.correct);
-    await DB.recordScore(studentId, practiceGame.id, correct, correct, wrong);
+    if (practiceGame) {
+      const correct = state.correct;
+      const wrong   = Math.max(0, state.qCount - state.correct);
+      await DB.recordScore(studentId, practiceGame.id, correct, correct, wrong);
+    }
+    // Critical: also mark practice as completed here, so Game 1 unlocks even if
+    // the markCompleted call from student.html got cancelled by fast navigation.
+    if (DB.markCompleted) {
+      await DB.markCompleted(studentId, 'practice');
+    }
   } catch (err) {
     console.warn('Could not record practice score:', err);
   }

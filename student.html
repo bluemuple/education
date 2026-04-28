@@ -475,11 +475,12 @@ function makeTile({label, sub, ico, badge, done, locked, lockedMsg, onClick}) {
   return el;
 }
 
-function openPractice() {
-  // Mark as done immediately on open — the practice itself is the existing geometry-quiz
-  // page. We treat "opened practice" as completion to keep things simple for kids.
-  if (state.studentId) DB.markCompleted(state.studentId, 'practice');
-  // Pass the student id so the practice page can record a score when it ends.
+async function openPractice() {
+  // Pass the student id so the practice page can record the completion + score
+  // when it actually ends (Charlie screen). The end-of-practice handler is the
+  // authoritative place to mark completion — earlier we tried to fire-and-forget
+  // here, but on slow networks (Chromebooks) the request was being cancelled by
+  // the immediate navigation, so the completions row never landed.
   const params = new URLSearchParams({ from: 'student' });
   if (state.studentId) params.set('student', state.studentId);
   window.location.href = 'geometry-quiz.html?' + params.toString();
