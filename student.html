@@ -94,6 +94,62 @@
   table.rank-tbl tr.top3-red td { background:#ffe1e1; color:#c0392b; font-weight:900; }
   table.rank-tbl tr.me-row td   { outline:3px dashed var(--primary); outline-offset:-3px; }
   .empty-rank { color:var(--muted); font-style:italic; padding:18px 0; text-align:center; }
+
+  /* ---- Multi-device alert modal ---- */
+  .modal-shade { position:fixed; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:50; padding:20px; }
+  .modal { background:#fff; border:4px solid var(--ink); border-radius:20px; max-width:420px; width:100%; padding:22px; box-shadow:var(--shadow); text-align:center; }
+  .modal h3 { margin:0 0 8px; color:#a84a00; font-size:22px; }
+  .modal p  { font-weight:700; line-height:1.4; }
+
+  /* ---- Achievement page ---- */
+  .ach-hero { display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .ach-avatar {
+    width:160px; height:176px; border:4px solid var(--ink); border-radius:24px;
+    background:#fff; padding:6px; box-shadow:var(--shadow); cursor:pointer;
+  }
+  .ach-avatar svg { width:100%; height:100%; display:block; }
+  .ach-edit-tip { font-size:12px; font-weight:800; color:var(--primary-ink); }
+  .ach-name { font-size:24px; font-weight:900; }
+  .ach-section h3 { margin:18px 0 8px; font-size:18px; }
+  .play-row { display:flex; flex-wrap:wrap; gap:10px; }
+  .play-btn {
+    flex:1; min-width:180px;
+    border:3px solid var(--ink); border-radius:16px; padding:14px 16px; cursor:pointer;
+    background:#fff8e8; font-weight:900; font-size:17px; text-align:left;
+    box-shadow:var(--shadow); display:flex; align-items:center; gap:10px;
+  }
+  .play-btn .ic { font-size:30px; }
+  .badge-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(110px, 1fr)); gap:10px; }
+  .badge-card {
+    border:3px solid var(--ink); border-radius:14px; padding:8px;
+    background:#fff; text-align:center; box-shadow:0 4px 0 rgba(0,0,0,0.12);
+  }
+  .badge-card img { width:88px; height:88px; object-fit:contain; }
+  .badge-card .lbl { font-size:11px; font-weight:800; margin-top:4px; line-height:1.2; }
+
+  /* ---- Profile maker ---- */
+  .pm-preview {
+    background:#e0e3e8; border:3px solid var(--ink); border-radius:18px;
+    padding:8px; display:flex; align-items:center; justify-content:center; height:240px;
+  }
+  .pm-preview svg { height:100%; width:auto; }
+  .pm-tabs { display:flex; gap:4px; overflow-x:auto; padding:8px 0; margin-top:10px; }
+  .pm-tab {
+    flex:0 0 auto; border:2px solid var(--ink); border-radius:999px;
+    background:#fff; padding:6px 12px; font-size:13px; font-weight:800; cursor:pointer;
+    white-space:nowrap;
+  }
+  .pm-tab.active { background:var(--primary); color:#fff; }
+  .pm-options { display:grid; grid-template-columns:repeat(auto-fill, minmax(64px, 1fr)); gap:8px; }
+  .pm-opt {
+    border:2px solid var(--ink); border-radius:10px; padding:6px; min-height:48px;
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    background:#fff; font-weight:800; font-size:13px;
+  }
+  .pm-opt.active { outline:3px solid var(--primary); }
+  .pm-swatch { width:36px; height:36px; border:2px solid var(--ink); border-radius:50%; cursor:pointer; }
+  .pm-swatch.active { outline:3px solid var(--primary); outline-offset:2px; }
+  .swatches { display:flex; flex-wrap:wrap; gap:8px; padding:8px 0; }
 </style>
 </head>
 <body>
@@ -140,6 +196,45 @@
     <p class="lock-msg" id="lock-msg"></p>
   </section>
 
+  <!-- Achievement page (shown right after the student confirms their name) -->
+  <section id="screen-achievement" class="card hidden">
+    <div class="ach-hero">
+      <div class="ach-avatar" id="ach-avatar" title="Tap to edit your avatar"></div>
+      <div class="ach-edit-tip">👆 tap the picture to edit</div>
+      <div class="ach-name" id="ach-name">…</div>
+    </div>
+
+    <div class="ach-section">
+      <h3>🎮 Let's play</h3>
+      <div class="play-row">
+        <button class="play-btn" id="play-2dshapes">
+          <span class="ic">📐</span><span>2D Shapes</span>
+        </button>
+      </div>
+      <p class="empty" style="font-size:12px;">More buttons coming soon!</p>
+    </div>
+
+    <div class="ach-section">
+      <h3>🏅 2D Shapes Badges</h3>
+      <div class="badge-grid" id="badge-grid"></div>
+    </div>
+  </section>
+
+  <!-- Profile maker page -->
+  <section id="screen-profile" class="card hidden">
+    <h2 class="page-title">Make your avatar</h2>
+    <div class="pm-preview" id="pm-preview"></div>
+    <div class="pm-tabs" id="pm-tabs"></div>
+    <div id="pm-options-wrap">
+      <div class="pm-options" id="pm-options"></div>
+      <div class="swatches" id="pm-swatches"></div>
+    </div>
+    <div class="yn-row" style="margin-top:16px; gap:10px;">
+      <button class="btn secondary" id="pm-cancel">← Cancel</button>
+      <button class="btn good" id="pm-save">💾 Save</button>
+    </div>
+  </section>
+
   <!-- Pre-game ranking page -->
   <section id="screen-ranking" class="card hidden">
     <h2 class="page-title" id="rank-title">Ranking</h2>
@@ -157,6 +252,7 @@
 <script src="js/supabase-config.js"></script>
 <script src="js/db.js"></script>
 <script src="js/tts.js"></script>
+<script src="js/avatar.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 let state = {
@@ -176,10 +272,10 @@ function loadSession(){ try { return JSON.parse(sessionStorage.getItem(SESSION_K
 function clearSession(){ try { sessionStorage.removeItem(SESSION_KEY); } catch(e){} }
 
 function showScreen(id) {
-  ['screen-gender','screen-name','screen-confirm','screen-page2','screen-ranking']
+  ['screen-gender','screen-name','screen-confirm','screen-page2','screen-ranking',
+   'screen-achievement','screen-profile']
     .forEach(s => $(s).classList.add('hidden'));
   $(id).classList.remove('hidden');
-  // Stop any TTS when changing screen
   TTS.stop();
 }
 
@@ -229,17 +325,26 @@ function askConfirm(s) {
   TTS.speak(msg, { gender: 'female', pitch: 1.15, rate: 0.95 });
 }
 $('confirm-yes').onclick = async () => {
-  // pull completion status, save session, show page 2
   saveSession();
-  // Record this browser/device against the chosen student so the teacher can
-  // see if the same name is being used on too many devices.
-  if (DB.recordStudentLogin) DB.recordStudentLogin(state.studentId);
+  if (DB.recordStudentLogin) {
+    try { await DB.recordStudentLogin(state.studentId); }
+    catch (err) { console.warn('recordStudentLogin failed:', err); }
+  }
   state.practiceDone = await DB.hasCompleted(state.studentId, 'practice');
   state.game1Done    = await DB.hasCompleted(state.studentId, 'game1');
   state.games        = await DB.listGames();
   updateWhoStrip();
-  await renderPage2();
-  showScreen('screen-page2');
+  // Land on the Achievement page first (avatar, Let's Play, Badges)
+  await renderAchievement();
+  showScreen('screen-achievement');
+  // Check device count for this student — show alert if > 1
+  if (DB.listDeviceCounts) {
+    try {
+      const counts = await DB.listDeviceCounts();
+      const n = counts[state.studentId] || 0;
+      if (n > 1) showMultiDeviceAlert(n);
+    } catch(e){}
+  }
 };
 $('confirm-no').onclick = () => {
   state.studentId = null; state.studentName = null;
@@ -407,13 +512,185 @@ function formatDate(s) {
   const d = new Date(s);
   return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
 }
-function signOut() {
+async function signOut() {
+  // Drop the device-login row so the teacher's "⚠ N devices" badge updates
+  const sid = state.studentId;
+  if (sid && DB.removeStudentLogin) {
+    try { await DB.removeStudentLogin(sid); } catch(e){}
+  }
   state.studentId = null; state.studentName = null; state.gender = null;
   clearSession(); updateWhoStrip();
   showScreen('screen-gender');
 }
 
+// ---------- idle auto-logout ----------
+// If the student stops touching the screen for IDLE_MS, log them out so
+// the teacher's multi-device badge clears and another student can take over.
+const IDLE_MS = 3 * 60 * 1000; // 3 minutes
+let _idleTimer = null;
+function _resetIdle() {
+  if (_idleTimer) clearTimeout(_idleTimer);
+  _idleTimer = setTimeout(() => {
+    // Only auto-logout if a student is currently signed in
+    if (state.studentId) signOut();
+  }, IDLE_MS);
+}
+['click','keydown','touchstart','pointerdown'].forEach(ev =>
+  document.addEventListener(ev, _resetIdle, { passive: true }));
+_resetIdle();
+
 function escapeHtml(s) { return (s||'').toString().replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+
+// ---------- Multi-device alert modal ----------
+function showMultiDeviceAlert(count) {
+  // Don't double-stack if one is already open
+  if (document.getElementById('mdev-modal')) return;
+  const shade = document.createElement('div');
+  shade.className = 'modal-shade';
+  shade.id = 'mdev-modal';
+  shade.innerHTML = `
+    <div class="modal">
+      <h3>⚠️ Heads up</h3>
+      <p>${count} people are logged in with the same name.<br>Bring it to the teacher.</p>
+      <div class="yn-row" style="justify-content:center; margin-top:14px;">
+        <button class="btn" id="mdev-dismiss">Dismiss</button>
+      </div>
+    </div>`;
+  document.body.appendChild(shade);
+  document.getElementById('mdev-dismiss').onclick = () => shade.remove();
+}
+
+// ---------- Achievement page ----------
+const BADGE_DEFS = [
+  { id:'practice_makes_perfect', label:'Practice Makes Perfect', img:'badge_practice_makes_perfect.png', emoji:'📚' },
+  { id:'better_me',              label:'Better Me',              img:'badge_better_me.png',              emoji:'🌱' },
+  { id:'even_better_me',         label:'Even Better Me',         img:'badge_even_better_me.png',         emoji:'🚀' },
+  { id:'challenge',              label:'Challenge',              img:'badge_challenge.png',              emoji:'⚔️' },
+  { id:'warrior',                label:'Warrior',                img:'badge_warrior.png',                emoji:'🥇' },
+  { id:'effort',                 label:'Effort',                 img:'badge_effort.png',                 emoji:'💪' },
+];
+async function renderAchievement() {
+  $('ach-name').textContent = state.studentName || '';
+  // Avatar — if the student hasn't picked one yet, show no-profile.png; if
+  // that file is missing, fall back to the default SVG avatar.
+  const profile = (DB.getStudentProfile ? await DB.getStudentProfile(state.studentId) : null);
+  const av = $('ach-avatar');
+  if (profile) {
+    av.innerHTML = AVATAR.render(profile);
+  } else {
+    const fallback = AVATAR.render(AVATAR.DEFAULT)
+      .replace(/"/g, '&quot;');
+    av.innerHTML = `<img src="2d/no-profile.png" alt="No avatar yet"
+        style="width:100%; height:100%; display:block; object-fit:contain; border-radius:18px;"
+        onerror="this.parentNode.innerHTML='${fallback}'" />`;
+  }
+  // Badges
+  const grid = $('badge-grid'); grid.innerHTML = '';
+  let earned = new Set();
+  if (DB.getEarnedBadges) {
+    try { earned = await DB.getEarnedBadges(state.studentId); } catch(e){ earned = new Set(); }
+  }
+  const BADGES_BASE = '2d/badges/2D%20Shapes';
+  if (!earned.size) {
+    const card = document.createElement('div');
+    card.className = 'badge-card';
+    card.innerHTML = `<img src="${BADGES_BASE}/no-badge.png" alt="No badges yet"
+                       onerror="this.replaceWith(Object.assign(document.createElement('div'),{innerHTML:'🎖',style:'font-size:48px; padding:20px 0;'}))" />
+                      <div class="lbl">No badges yet</div>`;
+    grid.appendChild(card);
+    return;
+  }
+  for (const def of BADGE_DEFS) {
+    if (!earned.has(def.id)) continue;
+    const card = document.createElement('div');
+    card.className = 'badge-card';
+    card.innerHTML = `<img src="${BADGES_BASE}/${def.img}" alt="${escapeHtml(def.label)}"
+                       onerror="this.replaceWith(Object.assign(document.createElement('div'),{innerHTML:'${def.emoji}',style:'font-size:48px; padding:20px 0;'}))" />
+                      <div class="lbl">${escapeHtml(def.label)}</div>`;
+    grid.appendChild(card);
+  }
+}
+$('play-2dshapes').onclick = async () => {
+  await renderPage2();
+  showScreen('screen-page2');
+};
+$('ach-avatar').onclick = openProfileMaker;
+
+// ---------- Profile maker ----------
+const PM_TABS = [
+  { key:'face',      label:'Face',      kind:'option' },
+  { key:'hair',      label:'Hair',      kind:'option' },
+  { key:'eyes',      label:'Eyes',      kind:'option' },
+  { key:'brows',     label:'Brows',     kind:'option' },
+  { key:'mouth',     label:'Mouth',     kind:'option' },
+  { key:'nose',      label:'Nose',      kind:'option' },
+  { key:'moustache', label:'Moustache', kind:'option' },
+  { key:'glasses',   label:'Glasses',   kind:'option' },
+  { key:'hat',       label:'Hat',       kind:'option' },
+  { key:'shirt',     label:'Shirt',     kind:'option' },
+  { key:'skin',      label:'Skin',      kind:'color'  },
+  { key:'hairColor', label:'Hair color',kind:'color'  },
+  { key:'shirtColor',label:'Shirt color',kind:'color' },
+];
+let _pmProfile = null;
+let _pmTab = 'face';
+async function openProfileMaker() {
+  _pmProfile = Object.assign({}, AVATAR.DEFAULT,
+    (await (DB.getStudentProfile ? DB.getStudentProfile(state.studentId) : null)) || {});
+  _pmTab = 'face';
+  pmRender();
+  showScreen('screen-profile');
+}
+function pmRender() {
+  $('pm-preview').innerHTML = AVATAR.render(_pmProfile);
+  // Tabs
+  const tabs = $('pm-tabs'); tabs.innerHTML = '';
+  for (const t of PM_TABS) {
+    const b = document.createElement('button');
+    b.className = 'pm-tab' + (t.key === _pmTab ? ' active' : '');
+    b.textContent = t.label;
+    b.onclick = () => { _pmTab = t.key; pmRender(); };
+    tabs.appendChild(b);
+  }
+  // Options for current tab
+  const tab = PM_TABS.find(t => t.key === _pmTab);
+  const opts = $('pm-options'); const sw = $('pm-swatches');
+  opts.innerHTML = ''; sw.innerHTML = '';
+  if (tab.kind === 'option') {
+    sw.style.display = 'none';
+    opts.style.display = '';
+    for (const v of AVATAR.CHOICES[tab.key]) {
+      const cell = document.createElement('div');
+      cell.className = 'pm-opt' + (_pmProfile[tab.key] === v ? ' active' : '');
+      // Mini preview: render avatar with just this option overridden
+      const mini = Object.assign({}, _pmProfile, { [tab.key]: v });
+      cell.innerHTML = `<div style="width:54px; height:60px;">${AVATAR.render(mini)}</div>`;
+      cell.onclick = () => { _pmProfile[tab.key] = v; pmRender(); };
+      opts.appendChild(cell);
+    }
+  } else {
+    opts.style.display = 'none';
+    sw.style.display = '';
+    for (const c of AVATAR.CHOICES[tab.key]) {
+      const cell = document.createElement('div');
+      cell.className = 'pm-swatch' + (_pmProfile[tab.key] === c ? ' active' : '');
+      cell.style.background = c;
+      cell.onclick = () => { _pmProfile[tab.key] = c; pmRender(); };
+      sw.appendChild(cell);
+    }
+  }
+}
+$('pm-cancel').onclick = async () => {
+  await renderAchievement();
+  showScreen('screen-achievement');
+};
+$('pm-save').onclick = async () => {
+  if (DB.setStudentProfile && state.studentId) {
+    try { await DB.setStudentProfile(state.studentId, _pmProfile); } catch(e){}
+  }
+  await renderAchievement();
+  showScreen('screen-achievement');
+};
 
 // ---------- boot ----------
 (async () => {
@@ -439,8 +716,8 @@ function escapeHtml(s) { return (s||'').toString().replace(/[&<>"']/g, c => ({ '
         const g2 = state.games.find(g => g.slot === 'game2');
         if (g2) { openGame(g2.id); return; }
       }
-      await renderPage2();
-      showScreen('screen-page2');
+      await renderAchievement();
+      showScreen('screen-achievement');
       return;
     }
   }

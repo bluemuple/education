@@ -1561,6 +1561,25 @@ el('btn-restart').onclick = () => {
   renderQuestion();
 };
 
+// ---------- idle auto-logout (3 min of no input → log out) ----------
+const IDLE_MS = 3 * 60 * 1000;
+let _idleTimer = null;
+async function _idleLogout() {
+  const studentId = new URLSearchParams(location.search).get('student');
+  if (studentId && window.DB && DB.removeStudentLogin) {
+    try { await DB.removeStudentLogin(studentId); } catch(e){}
+  }
+  try { sessionStorage.removeItem('mg.session.v1'); } catch(e){}
+  location.href = 'student.html';
+}
+function _resetIdle() {
+  if (_idleTimer) clearTimeout(_idleTimer);
+  _idleTimer = setTimeout(_idleLogout, IDLE_MS);
+}
+['click','keydown','touchstart','pointerdown'].forEach(ev =>
+  document.addEventListener(ev, _resetIdle, { passive: true }));
+_resetIdle();
+
 // ====================== Enter-key shortcut ======================
 // Pressing Enter on any "in-between" screen acts like clicking the prominent
 // "next" button. We intentionally do NOT trigger Submit — that's still a click,

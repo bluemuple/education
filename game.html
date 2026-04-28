@@ -522,6 +522,24 @@ function escapeHtml(s) { return (s||'').toString().replace(/[&<>"']/g, c => ({ '
 $('btn-home').onclick = () => { location.href = 'student.html'; };
 $('btn-replay').onclick = () => { location.reload(); };
 
+// ---------- idle auto-logout (3 min of no input → log out + leave game) ----------
+const IDLE_MS = 3 * 60 * 1000;
+let _idleTimer = null;
+async function _idleLogout() {
+  if (STUDENT_ID && window.DB && DB.removeStudentLogin) {
+    try { await DB.removeStudentLogin(STUDENT_ID); } catch(e){}
+  }
+  try { sessionStorage.removeItem('mg.session.v1'); } catch(e){}
+  location.href = 'student.html';
+}
+function _resetIdle() {
+  if (_idleTimer) clearTimeout(_idleTimer);
+  _idleTimer = setTimeout(_idleLogout, IDLE_MS);
+}
+['click','keydown','touchstart','pointerdown'].forEach(ev =>
+  document.addEventListener(ev, _resetIdle, { passive: true }));
+_resetIdle();
+
 // Enter shortcut: advances to the next question after a result, or to the
 // follow-on game when the run is over. Doesn't fire while typing in the SA box.
 document.addEventListener('keydown', (ev) => {
