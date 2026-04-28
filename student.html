@@ -239,7 +239,10 @@
 
   <!-- Page 2 -->
   <section id="screen-page2" class="card hidden">
-    <h2 class="page-title">What would you like to do?</h2>
+    <div style="display:flex; align-items:center; gap:14px; margin-bottom:14px;">
+      <h2 class="page-title" style="flex:1; margin:0;">What would you like to do?</h2>
+      <div id="page2-avatar" style="flex:0 0 auto; width:80px; height:88px; border:3px solid var(--ink); border-radius:14px; background:#fff; padding:3px; box-shadow:var(--shadow); overflow:hidden;"></div>
+    </div>
     <div class="tiles" id="tiles"></div>
     <p class="lock-msg" id="lock-msg"></p>
   </section>
@@ -411,6 +414,8 @@ $('confirm-no').onclick = () => {
 async function renderPage2() {
   const tiles = $('tiles'); tiles.innerHTML = '';
   $('lock-msg').textContent = '';
+  // Render the saved avatar in the top-right of this page
+  await renderPage2Avatar();
   // Practice (always available, points to geometry-quiz.html)
   tiles.appendChild(makeTile({
     label:'Practice', sub:'Warm up your shape brain', ico:'📚',
@@ -461,6 +466,25 @@ async function renderPage2() {
     }));
   }
 }
+async function renderPage2Avatar() {
+  const slot = document.getElementById('page2-avatar');
+  if (!slot || !window.AVATAR) return;
+  let profile = null;
+  if (state.studentId && DB.getStudentProfile) {
+    try { profile = await DB.getStudentProfile(state.studentId); } catch(e){}
+  }
+  if (profile) {
+    slot.style.background = '#fff';
+    slot.innerHTML = window.AVATAR.render(profile);
+  } else {
+    const fallback = window.AVATAR.render(window.AVATAR.DEFAULT).replace(/"/g, '&quot;');
+    slot.style.background = '#1a1a1a';
+    slot.innerHTML = `<img src="2d/no-profile.png" alt=""
+        style="width:100%; height:100%; display:block; object-fit:cover; border-radius:11px;"
+        onerror="this.parentNode.style.background='#fff'; this.parentNode.innerHTML='${fallback}'" />`;
+  }
+}
+
 function makeTile({label, sub, ico, badge, done, locked, lockedMsg, onClick}) {
   const el = document.createElement('div');
   el.className = 'tile' + (done?' done':'') + (locked?' locked':'');
@@ -602,7 +626,7 @@ function stopHeartbeat() {
 // ---------- idle auto-logout ----------
 // If the student stops touching the screen for IDLE_MS, log them out so
 // the teacher's multi-device badge clears and another student can take over.
-const IDLE_MS = 3 * 60 * 1000; // 3 minutes
+const IDLE_MS = 30 * 60 * 1000; // 30 minutes
 let _idleTimer = null;
 function _resetIdle() {
   if (_idleTimer) clearTimeout(_idleTimer);
@@ -638,13 +662,41 @@ function showMultiDeviceAlert(count) {
 
 // ---------- Achievement page ----------
 const BADGE_DEFS = [
-  { id:'practice_makes_perfect', label:'Practice Makes Perfect', img:'badge_practice_makes_perfect.png', emoji:'📚' },
-  { id:'better_me',              label:'Better Me',              img:'badge_better_me.png',              emoji:'🌱' },
-  { id:'even_better_me',         label:'Even Better Me',         img:'badge_even_better_me.png',         emoji:'🚀' },
-  { id:'challenge',              label:'Challenge',              img:'badge_challenge.png',              emoji:'⚔️' },
-  { id:'warrior',                label:'Warrior',                img:'badge_warrior.png',                emoji:'🥇' },
-  { id:'effort',                 label:'Effort',                 img:'badge_effort.png',                 emoji:'💪' },
+  { id:'practice_makes_perfect', label:'Practice Makes Perfect', img:'badge_practice_makes_perfect.png', emoji:'📚',
+    desc:'You finished a 2D Shapes practice round. Practice makes perfect!' },
+  { id:'better_me',              label:'Better Me',              img:'badge_better_me.png',              emoji:'🌱',
+    desc:'You played a 2D Shapes game more than once — now you can see how much you have improved.' },
+  { id:'even_better_me',         label:'Even Better Me',         img:'badge_even_better_me.png',         emoji:'🚀',
+    desc:'You beat your previous personal best score in a 2D Shapes game!' },
+  { id:'challenge',              label:'Challenge',              img:'badge_challenge.png',              emoji:'⚔️',
+    desc:'You took on Me vs. the Class — the competition mode of the 2D Shapes game.' },
+  { id:'warrior',                label:'Warrior',                img:'badge_warrior.png',                emoji:'🥇',
+    desc:'You finished in the top 3 of a 2D Shapes game ranking. Well done, warrior!' },
+  { id:'effort',                 label:'Effort',                 img:'badge_effort.png',                 emoji:'💪',
+    desc:'You played Practice or Games 7 or more times. That is serious effort.' },
 ];
+
+function showBadgeModal(def) {
+  if (document.getElementById('badge-modal')) return;
+  const shade = document.createElement('div');
+  shade.className = 'modal-shade';
+  shade.id = 'badge-modal';
+  const BADGES_BASE_LOCAL = 'Badges/2D%20Shapes';
+  shade.innerHTML = `
+    <div class="modal" style="max-width:360px;">
+      <img src="${BADGES_BASE_LOCAL}/${def.img}" alt="${escapeHtml(def.label)}"
+           style="width:120px; height:120px; object-fit:contain; margin:0 auto 6px; display:block;"
+           onerror="this.replaceWith(Object.assign(document.createElement('div'),{innerHTML:'${def.emoji}',style:'font-size:64px; margin:8px 0;'}))" />
+      <h3 style="margin:0 0 8px;">${escapeHtml(def.label)}</h3>
+      <p style="font-weight:700;">${escapeHtml(def.desc)}</p>
+      <div class="yn-row" style="justify-content:center; margin-top:14px;">
+        <button class="btn" id="badge-modal-close">Cool!</button>
+      </div>
+    </div>`;
+  shade.addEventListener('click', (e) => { if (e.target === shade) shade.remove(); });
+  document.body.appendChild(shade);
+  document.getElementById('badge-modal-close').onclick = () => shade.remove();
+}
 async function renderAchievement() {
   $('ach-name').textContent = state.studentName || '';
   // Avatar — if the student hasn't picked one yet, show no-profile.png; if
@@ -682,9 +734,12 @@ async function renderAchievement() {
     if (!earned.has(def.id)) continue;
     const card = document.createElement('div');
     card.className = 'badge-card';
+    card.style.cursor = 'pointer';
+    card.title = 'Tap to see why you earned this';
     card.innerHTML = `<img src="${BADGES_BASE}/${def.img}" alt="${escapeHtml(def.label)}"
                        onerror="this.replaceWith(Object.assign(document.createElement('div'),{innerHTML:'${def.emoji}',style:'font-size:48px; padding:20px 0;'}))" />
                       <div class="lbl">${escapeHtml(def.label)}</div>`;
+    card.onclick = () => showBadgeModal(def);
     grid.appendChild(card);
   }
 }

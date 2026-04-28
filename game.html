@@ -163,6 +163,7 @@
 
   <!-- End screen -->
   <section id="screen-end" class="card end-card hidden">
+    <div id="end-avatar" style="width:120px; height:120px; margin:0 auto 8px; border:3px solid var(--ink); border-radius:18px; background:#fff; padding:4px; box-shadow:var(--shadow); overflow:hidden;"></div>
     <h2 style="margin:0 0 6px;">⏰ Time's up!</h2>
     <p class="end-sub" id="end-sub">Great effort.</p>
     <div class="big-score"><span id="end-score">0</span> pts</div>
@@ -193,6 +194,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase-config.js"></script>
 <script src="js/db.js"></script>
+<script src="js/avatar.js"></script>
 <script src="js/shapes.js"></script>
 <script src="js/questions.js"></script>
 <script>
@@ -436,66 +438,90 @@ function submitAnswer() {
 async function finish() {
   state.finished = true;
   if (tickHandle) clearInterval(tickHandle);
-  // record score (with correct + wrong counts)
-  await DB.recordScore(STUDENT_ID, GAME_ID, state.score, state.correctCount, state.wrongCount);
-  // mark game1 completion if applicable
-  if (game.slot === 'game1') await DB.markCompleted(STUDENT_ID, 'game1');
 
+  // ── Switch to the end screen IMMEDIATELY using values we already have in
+  //    memory (score, questions answered, level reached). The DB writes and the
+  //    rank tables fill in afterwards, asynchronously, so the timer-up moment
+  //    feels instant.
   $('end-score').textContent = state.score;
   $('end-stats').textContent = `${state.qNum} questions answered · highest level reached: L${maxLevelHit()}`;
   $('end-sub').textContent = encouragement(state.score);
+  $('my-rank').classList.add('hidden');
+  $('class-rank').classList.add('hidden');
+  $('btn-go-game2').classList.add('hidden');
+  $('screen-q').classList.add('hidden');
+  $('screen-end').classList.remove('hidden');
+  // Render avatar at the top of the end card
+  renderEndAvatar();
 
-  // Always show personal rank
-  const myScores = await DB.listScoresFor(STUDENT_ID, GAME_ID);
-  const sorted = [...myScores].sort((a,b) => b.score - a.score);
-  const myRows = $('my-rank-rows'); myRows.innerHTML = '';
-  sorted.slice(0,10).forEach((s, i) => {
-    const tr = document.createElement('tr');
-    if (s.played_at && Math.abs(new Date(s.played_at) - new Date()) < 60000) tr.classList.add('me-row');
-    tr.innerHTML = `<td>${i+1}</td><td>${formatDate(s.played_at)}</td><td><b>${s.score}</b></td>`;
-    myRows.appendChild(tr);
-  });
-  $('my-rank').classList.remove('hidden');
+  // Now do the heavy work in the background
+  try { await DB.recordScore(STUDENT_ID, GAME_ID, state.score, state.correctCount, state.wrongCount); } catch(e){}
+  if (game.slot === 'game1') { try { await DB.markCompleted(STUDENT_ID, 'game1'); } catch(e){} }
 
-  // Game 2 (or any built-in/custom that says class) — show class rank
-  if (game.slot === 'game2' || game.slot === 'custom') {
-    const allScores = await DB.listScores();
-    const students = await DB.listStudents();
-    const stuById = Object.fromEntries(students.map(s => [s.id, s]));
-    // best score per student for THIS game
-    const best = {};
-    for (const s of allScores.filter(x => x.game_id === GAME_ID)) {
-      if (!best[s.student_id] || s.score > best[s.student_id].score) best[s.student_id] = s;
-    }
-    const ranking = Object.values(best).sort((a,b) => b.score - a.score);
-    const rows = $('class-rank-rows'); rows.innerHTML = '';
-    ranking.forEach((s, i) => {
-      const stu = stuById[s.student_id];
+  // Personal rank table
+  try {
+    const myScores = await DB.listScoresFor(STUDENT_ID, GAME_ID);
+    const sorted = [...myScores].sort((a,b) => b.score - a.score);
+    const myRows = $('my-rank-rows'); myRows.innerHTML = '';
+    sorted.slice(0,10).forEach((s, i) => {
       const tr = document.createElement('tr');
-      if (i < 3) tr.classList.add('top3');
-      if (s.student_id === STUDENT_ID) tr.classList.add('me-row');
-      tr.innerHTML = `<td>${i+1}</td><td>${escapeHtml(stu?stu.name:'(unknown)')}</td>
-                      <td><b>${s.score}</b></td><td>${formatDate(s.played_at)}</td>`;
-      rows.appendChild(tr);
+      if (s.played_at && Math.abs(new Date(s.played_at) - new Date()) < 60000) tr.classList.add('me-row');
+      tr.innerHTML = `<td>${i+1}</td><td>${formatDate(s.played_at)}</td><td><b>${s.score}</b></td>`;
+      myRows.appendChild(tr);
     });
-    $('class-rank').classList.remove('hidden');
+    $('my-rank').classList.remove('hidden');
+  } catch(e){}
+
+  // Class ranking for Game 2 / custom
+  if (game.slot === 'game2' || game.slot === 'custom') {
+    try {
+      const allScores = await DB.listScores();
+      const students = await DB.listStudents();
+      const stuById = Object.fromEntries(students.map(s => [s.id, s]));
+      const best = {};
+      for (const s of allScores.filter(x => x.game_id === GAME_ID)) {
+        if (!best[s.student_id] || s.score > best[s.student_id].score) best[s.student_id] = s;
+      }
+      const ranking = Object.values(best).sort((a,b) => b.score - a.score);
+      const rows = $('class-rank-rows'); rows.innerHTML = '';
+      ranking.forEach((s, i) => {
+        const stu = stuById[s.student_id];
+        const tr = document.createElement('tr');
+        if (i < 3) tr.classList.add('top3');
+        if (s.student_id === STUDENT_ID) tr.classList.add('me-row');
+        tr.innerHTML = `<td>${i+1}</td><td>${escapeHtml(stu?stu.name:'(unknown)')}</td>
+                        <td><b>${s.score}</b></td><td>${formatDate(s.played_at)}</td>`;
+        rows.appendChild(tr);
+      });
+      $('class-rank').classList.remove('hidden');
+    } catch(e){}
   }
 
   // Show "Continue to Game 2" button only after finishing Game 1
   if (game.slot === 'game1') {
-    const games = await DB.listGames();
-    const g2 = games.find(g => g.slot === 'game2');
-    if (g2) {
-      $('btn-go-game2').classList.remove('hidden');
-      $('btn-go-game2').onclick = () => {
-        const q = new URLSearchParams({ student: STUDENT_ID, game: g2.id });
-        location.href = 'game.html?' + q.toString();
-      };
-    }
+    try {
+      const games = await DB.listGames();
+      const g2 = games.find(g => g.slot === 'game2');
+      if (g2) {
+        $('btn-go-game2').classList.remove('hidden');
+        $('btn-go-game2').onclick = () => {
+          const q = new URLSearchParams({ student: STUDENT_ID, game: g2.id });
+          location.href = 'game.html?' + q.toString();
+        };
+      }
+    } catch(e){}
   }
+}
 
-  $('screen-q').classList.add('hidden');
-  $('screen-end').classList.remove('hidden');
+// Renders the student's saved avatar at the top of the end screen.
+async function renderEndAvatar() {
+  const slot = document.getElementById('end-avatar');
+  if (!slot || !window.AVATAR) return;
+  let profile = null;
+  try { if (DB.getStudentProfile) profile = await DB.getStudentProfile(STUDENT_ID); } catch(e){}
+  if (profile) slot.innerHTML = window.AVATAR.render(profile);
+  else slot.innerHTML = `<img src="2d/no-profile.png" alt="" style="width:100%; height:100%; object-fit:cover; border-radius:14px;"
+                              onerror="this.parentNode.innerHTML='${window.AVATAR.render(window.AVATAR.DEFAULT).replace(/"/g,'&quot;')}'" />`;
 }
 
 function maxLevelHit() {
@@ -522,8 +548,8 @@ function escapeHtml(s) { return (s||'').toString().replace(/[&<>"']/g, c => ({ '
 $('btn-home').onclick = () => { location.href = 'student.html'; };
 $('btn-replay').onclick = () => { location.reload(); };
 
-// ---------- idle auto-logout (3 min of no input → log out + leave game) ----------
-const IDLE_MS = 3 * 60 * 1000;
+// ---------- idle auto-logout (30 min of no input → log out + leave game) ----------
+const IDLE_MS = 30 * 60 * 1000;
 let _idleTimer = null;
 async function _idleLogout() {
   if (STUDENT_ID && window.DB && DB.removeStudentLogin) {

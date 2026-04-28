@@ -238,6 +238,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase-config.js"></script>
 <script src="js/db.js"></script>
+<script src="js/avatar.js"></script>
 <div class="wrap">
   <a id="back-to-game" href="student.html" style="display:inline-block; text-decoration:none; font-weight:900; color:#a84a00; padding:8px 14px; border:3px solid #1d1d24; border-radius:14px; background:#fff; box-shadow:0 4px 0 rgba(0,0,0,0.12); margin-bottom:12px; align-self:flex-start; width:fit-content;">🏠 Back to menu</a>
   <header class="bar">
@@ -320,6 +321,7 @@
 
   <!-- End screen -->
   <section id="screen-end" class="card end-card hidden">
+    <div id="end-avatar" style="width:120px; height:120px; margin:0 auto 8px; border:3px solid var(--ink); border-radius:18px; background:#fff; padding:4px; box-shadow:var(--shadow); overflow:hidden;"></div>
     <h2 style="margin:0 0 6px;">🏆 You did it!</h2>
     <p class="reward-sub" id="end-sub">Great work learning about 2D shapes.</p>
     <div class="big-score" id="end-score">0 / 0</div>
@@ -1381,6 +1383,21 @@ function showEnd(msg) {
   const fromStudent = (new URLSearchParams(location.search).get('from') === 'student');
   el('btn-go-game1').classList.toggle('hidden', !fromStudent);
   showScreen('screen-end');
+  renderPracticeEndAvatar();
+}
+
+// Render the student's saved avatar at the top of the practice end screen.
+async function renderPracticeEndAvatar() {
+  const slot = document.getElementById('end-avatar');
+  if (!slot || !window.AVATAR) return;
+  const studentId = new URLSearchParams(location.search).get('student');
+  let profile = null;
+  if (studentId && window.DB && DB.getStudentProfile) {
+    try { profile = await DB.getStudentProfile(studentId); } catch(e){}
+  }
+  if (profile) slot.innerHTML = window.AVATAR.render(profile);
+  else slot.innerHTML = `<img src="2d/no-profile.png" alt="" style="width:100%; height:100%; object-fit:cover; border-radius:14px;"
+                              onerror="this.parentNode.innerHTML='${window.AVATAR.render(window.AVATAR.DEFAULT).replace(/"/g,'&quot;')}'" />`;
 }
 
 // ====================== WIRE UP ======================
@@ -1567,8 +1584,8 @@ el('btn-restart').onclick = () => {
   renderQuestion();
 };
 
-// ---------- idle auto-logout (3 min of no input → log out) ----------
-const IDLE_MS = 3 * 60 * 1000;
+// ---------- idle auto-logout (30 min of no input → log out) ----------
+const IDLE_MS = 30 * 60 * 1000;
 let _idleTimer = null;
 async function _idleLogout() {
   const studentId = new URLSearchParams(location.search).get('student');
