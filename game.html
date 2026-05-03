@@ -197,6 +197,7 @@
 <script src="js/avatar.js"></script>
 <script src="js/shapes.js"></script>
 <script src="js/questions.js"></script>
+<script src="js/ef1-questions.js"></script>
 <script>
 // Inject shape fills
 const styleEl = document.createElement('style'); styleEl.textContent = window.SHAPE_CSS; document.head.appendChild(styleEl);
@@ -204,6 +205,8 @@ const styleEl = document.createElement('style'); styleEl.textContent = window.SH
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const STUDENT_ID = params.get('student');
+// Subject can be passed via URL or inferred from the game slot once loaded.
+const SUBJECT_HINT = params.get('subject') || null;
 const GAME_ID    = params.get('game');
 
 let game = null;       // game row
@@ -225,6 +228,33 @@ let state = {
 };
 let tickHandle = null;
 
+// Subject-aware question source. Filled in after we know the game slot.
+let SUBJECT = null;          // '2dshapes' | 'ef1'
+let QUESTION_BANK = null;    // array of questions
+let BY_LEVEL = null;         // { 1:[…], 2:[…], … }
+let LEVEL_POINTS = null;     // { 1:2, 2:4, … }
+let MAX_LEVEL = 5;
+
+function inferSubject(gameSlot) {
+  if (SUBJECT_HINT) return SUBJECT_HINT;
+  if (gameSlot && gameSlot.endsWith('_ef1')) return 'ef1';
+  return '2dshapes';
+}
+function configureSubject(subject) {
+  SUBJECT = subject;
+  if (subject === 'ef1') {
+    QUESTION_BANK = window.EF1_GAME_QUESTIONS;
+    BY_LEVEL      = window.EF1_GAME_BY_LEVEL;
+    LEVEL_POINTS  = window.EF1_LEVEL_POINTS;
+    MAX_LEVEL     = window.EF1_MAX_LEVEL;
+  } else {
+    QUESTION_BANK = window.QUESTIONS;
+    BY_LEVEL      = window.QUESTIONS_BY_LEVEL;
+    LEVEL_POINTS  = window.LEVEL_POINTS;
+    MAX_LEVEL     = 5;
+  }
+}
+
 // ---------------------- BOOT ----------------------
 (async () => {
   if (!STUDENT_ID || !GAME_ID) { abort('Missing student or game id.'); return; }
@@ -232,6 +262,7 @@ let tickHandle = null;
   student = students.find(s => s.id === STUDENT_ID);
   game    = games.find(g => g.id === GAME_ID);
   if (!student || !game) { abort('Student or game not found.'); return; }
+  configureSubject(inferSubject(game.slot));
   durationSec = Math.max(60, Math.min(7*60, (game.duration_minutes||2) * 60));
   $('game-name').textContent = `${game.name} · ${student.name}`;
   $('t-right').textContent = (game.duration_minutes||2) + ' min';
@@ -269,16 +300,13 @@ function tick() {
 
 // ---------------------- QUESTIONS ----------------------
 function pickQuestion() {
-  // Pick a random question at the current level not yet asked.
-  // Fall back to other levels if none available.
   const tries = [state.level, state.level-1, state.level+1, state.level-2, state.level+2,
                  state.level-3, state.level+3, state.level-4, state.level+4];
   for (const lv of tries) {
-    if (lv < 1 || lv > 5) continue;
-    const pool = (window.QUESTIONS_BY_LEVEL[lv] || []).filter(q => !state.asked.has(q.id));
+    if (lv < 1 || lv > MAX_LEVEL) continue;
+    const pool = (BY_LEVEL[lv] || []).filter(q => !state.asked.has(q.id));
     if (pool.length) return pool[Math.floor(Math.random() * pool.length)];
   }
-  // exhausted everything — start over
   state.asked.clear();
   return pickQuestion();
 }
@@ -334,11 +362,18 @@ function renderQuestion() {
   $('q-num').textContent = state.qNum;
   const pill = $('lvl-pill');
   pill.className = 'level-pill l' + q.level;
-  pill.textContent = `Level ${q.level} · ${window.LEVEL_POINTS[q.level]} pts`;
+  pill.textContent = `Level ${q.level} · ${LEVEL_POINTS[q.level]} pts`;
   $('q-text').textContent = q.text;
   // Click question text → William reads it
   $('q-text').onclick = () => playTTS('2d/tts/q_' + q.id + '_q.mp3', $('q-text'));
-  $('q-shape').innerHTML = q.shape ? (window.SHAPES[q.shape] || '') : '';
+  // Subject-aware visual: 2D Shapes uses q.shape (lookup in SHAPES), EF1 uses q.visual (object).
+  if (q.visual && window.EF1_renderVisual) {
+    $('q-shape').innerHTML = window.EF1_renderVisual(q.visual);
+  } else if (q.shape) {
+    $('q-shape').innerHTML = window.SHAPES[q.shape] || '';
+  } else {
+    $('q-shape').innerHTML = '';
+  }
   $('q-feedback').classList.add('hidden');
   $('btn-next').classList.add('hidden');
   $('btn-submit').classList.remove('hidden');
@@ -408,9 +443,9 @@ function submitAnswer() {
 
   // points + level adjust + correct/wrong tally
   if (correct) {
-    state.score += window.LEVEL_POINTS[q.level];
+    state.score += LEVEL_POINTS[q.level];
     state.correctCount++;
-    if (state.level < 5) state.level++;
+    if (state.level < MAX_LEVEL) state.level++;
   } else {
     state.wrongCount++;
     if (state.level > 1) state.level--;
@@ -422,7 +457,7 @@ function submitAnswer() {
   fb.classList.remove('hidden','good','bad');
   if (correct) {
     fb.classList.add('good');
-    fb.textContent = `✅ Correct! +${window.LEVEL_POINTS[q.level]} pts (next question gets harder)`;
+    fb.textContent = `✅ Correct! +${LEVEL_POINTS[q.level]} pts (next question gets harder)`;
   } else {
     let answerText;
     if (q.type === 'mc') answerText = q.options[q.answer];
@@ -444,8 +479,10 @@ async function finish() {
   //    again the moment the end screen appears. Two parallel writes are fast
   //    (typically <500 ms), so the screen-swap still feels nearly instant.
   const writes = [DB.recordScore(STUDENT_ID, GAME_ID, state.score, state.correctCount, state.wrongCount)];
-  if (game.slot === 'game1') writes.push(DB.markCompleted(STUDENT_ID, 'game1'));
-  if (game.slot === 'game2') writes.push(DB.markCompleted(STUDENT_ID, 'game2'));
+  // Mark completion using the actual slot value so subject-specific kinds
+  // ('game1_ef1', 'game2_ef1') are stored too.
+  if (game.slot === 'game1' || game.slot === 'game1_ef1') writes.push(DB.markCompleted(STUDENT_ID, game.slot));
+  if (game.slot === 'game2' || game.slot === 'game2_ef1') writes.push(DB.markCompleted(STUDENT_ID, game.slot));
   try { await Promise.allSettled(writes); } catch(e) { console.warn('finish writes failed:', e); }
 
   // ── 2) Now swap to the end screen with the score we know
@@ -475,7 +512,7 @@ async function finish() {
   } catch(e){}
 
   // Class ranking for Game 2 / custom
-  if (game.slot === 'game2' || game.slot === 'custom') {
+  if (game.slot === 'game2' || game.slot === 'game2_ef1' || game.slot === 'custom') {
     try {
       const allScores = await DB.listScores();
       const students = await DB.listStudents();
@@ -500,14 +537,17 @@ async function finish() {
   }
 
   // Show "Continue to Game 2" button only after finishing Game 1
-  if (game.slot === 'game1') {
+  if (game.slot === 'game1' || game.slot === 'game1_ef1') {
     try {
       const games = await DB.listGames();
-      const g2 = games.find(g => g.slot === 'game2');
+      // Find the matching Game 2 for the same subject
+      const targetSlot = (game.slot === 'game1_ef1') ? 'game2_ef1' : 'game2';
+      const g2 = games.find(g => g.slot === targetSlot);
       if (g2) {
         $('btn-go-game2').classList.remove('hidden');
         $('btn-go-game2').onclick = () => {
           const q = new URLSearchParams({ student: STUDENT_ID, game: g2.id });
+          if (SUBJECT === 'ef1') q.set('subject', 'ef1');
           location.href = 'game.html?' + q.toString();
         };
       }
@@ -544,7 +584,7 @@ async function renderEndAvatar() {
 function maxLevelHit() {
   let mx = 1;
   for (const id of state.asked) {
-    const q = window.QUESTIONS.find(x => x.id === id);
+    const q = QUESTION_BANK.find(x => x.id === id);
     if (q && q.level > mx) mx = q.level;
   }
   return mx;

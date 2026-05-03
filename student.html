@@ -109,6 +109,26 @@
   }
   .ach-avatar svg { width:100%; height:100%; display:block; }
   .ach-edit-tip { font-size:12px; font-weight:800; color:var(--primary-ink); }
+  /* Speech-balloon variant shown above the locked avatar */
+  .ach-edit-tip.balloon {
+    position:relative; max-width:280px; margin:8px auto 0;
+    background:#fff; color:var(--ink); border:3px solid var(--ink);
+    border-radius:14px; padding:8px 12px; font-size:13px; line-height:1.35;
+    box-shadow:0 4px 0 rgba(0,0,0,0.12); text-align:center;
+  }
+  .ach-edit-tip.balloon::after {
+    content:""; position:absolute; top:-12px; left:50%; transform:translateX(-50%);
+    width:0; height:0;
+    border-left:10px solid transparent; border-right:10px solid transparent;
+    border-bottom:12px solid #1d1d24;
+  }
+  .ach-edit-tip.balloon::before {
+    content:""; position:absolute; top:-8px; left:50%; transform:translateX(-50%);
+    width:0; height:0;
+    border-left:8px solid transparent; border-right:8px solid transparent;
+    border-bottom:10px solid #fff;
+    z-index:1;
+  }
   .gender-avatar { display:flex; align-items:center; justify-content:center; width:100%; height:100%; line-height:1; }
   .ach-avatar.locked { cursor:default; }
   .ach-name { font-size:24px; font-weight:900; }
@@ -141,7 +161,8 @@
     position:relative;
     overflow:hidden;
   }
-  .pm-preview-wrap svg { width:100%; height:100%; display:block; }
+  .pm-preview-wrap > #pm-preview { width:100%; height:100%; display:block; }
+  .pm-preview-wrap > #pm-preview > svg { width:100%; height:100%; display:block; }
   .pm-header {
     position:absolute; top:0; left:0; right:0; padding:10px 14px;
     display:flex; align-items:center; justify-content:space-between; z-index:10;
@@ -165,12 +186,13 @@
     padding:14px 8px 8px;
     -webkit-overflow-scrolling:touch;
   }
-  .pm-grid { display:grid; grid-template-columns:repeat(5, 1fr); gap:8px 4px; }
+  .pm-grid { display:grid; grid-template-columns:repeat(5, 1fr); gap:10px 6px; }
   .pm-opt {
     aspect-ratio:1/1; border:2.5px solid transparent; border-radius:12px;
     display:flex; align-items:center; justify-content:center; cursor:pointer;
     position:relative; background:#fff; overflow:hidden;
   }
+  .pm-opt > div { width:100%; height:100%; }
   .pm-opt svg { width:88%; height:88%; display:block; }
   .pm-opt.selected { border-color:#ffb800; }
   .pm-opt.none-icon::after {
@@ -263,6 +285,9 @@
         <button class="play-btn" id="play-2dshapes">
           <span class="ic">📐</span><span>2D Shapes</span>
         </button>
+        <button class="play-btn" id="play-ef1">
+          <span class="ic">🍰</span><span>Equivalent Fractions 1</span>
+        </button>
       </div>
       <p class="empty" style="font-size:12px;">More buttons coming soon!</p>
     </div>
@@ -284,7 +309,7 @@
             <button class="pm-save-btn" id="pm-save">Save</button>
           </div>
         </div>
-        <svg class="pm-preview-svg" viewBox="0 0 400 400" id="pm-preview"></svg>
+        <div id="pm-preview"></div>
       </div>
       <div class="pm-options-pane"><div class="pm-grid" id="pm-grid"></div></div>
       <div class="pm-palette" id="pm-palette"></div>
@@ -320,7 +345,11 @@ let state = {
   games: [],
   practiceDone: false,
   game1Done: false,
-  game2Done: false,    // unlocks profile-editing
+  game2Done: false,
+  efPracticeDone: false,
+  efGame1Done: false,
+  efGame2Done: false,
+  subject: '2dshapes',  // which subject the Page 2 tiles are showing
 };
 
 // On returning from a quiz, restore the chosen student
@@ -392,6 +421,9 @@ $('confirm-yes').onclick = async () => {
   state.practiceDone = await DB.hasCompleted(state.studentId, 'practice');
   state.game1Done    = await DB.hasCompleted(state.studentId, 'game1');
   state.game2Done    = await DB.hasCompleted(state.studentId, 'game2');
+  state.efPracticeDone = await DB.hasCompleted(state.studentId, 'practice_ef1');
+  state.efGame1Done    = await DB.hasCompleted(state.studentId, 'game1_ef1');
+  state.efGame2Done    = await DB.hasCompleted(state.studentId, 'game2_ef1');
   state.games        = await DB.listGames();
   updateWhoStrip();
   // Land on the Achievement page first (avatar, Let's Play, Badges)
@@ -418,63 +450,78 @@ $('confirm-no').onclick = () => {
 async function renderPage2() {
   const tiles = $('tiles'); tiles.innerHTML = '';
   $('lock-msg').textContent = '';
-  // Render the saved avatar in the top-right of this page
   await renderPage2Avatar();
-  // Practice (always available, points to geometry-quiz.html)
+
+  // Subject-aware slot prefixes / completion flags
+  const isEf  = state.subject === 'ef1';
+  const slotP = isEf ? 'practice_ef1' : 'practice';
+  const slotG1 = isEf ? 'game1_ef1' : 'game1';
+  const slotG2 = isEf ? 'game2_ef1' : 'game2';
+  const pDone  = isEf ? state.efPracticeDone : state.practiceDone;
+  const g1Done = isEf ? state.efGame1Done    : state.game1Done;
+
+  // Practice tile — opens the right practice page for this subject
   tiles.appendChild(makeTile({
-    label:'Practice', sub:'Warm up your shape brain', ico:'📚',
-    badge: state.practiceDone ? 'Done ✓' : 'Start here',
-    done: state.practiceDone,
-    onClick: openPractice,
+    label:'Practice',
+    sub: isEf ? 'Warm up your fraction brain' : 'Warm up your shape brain',
+    ico:'📚',
+    badge: pDone ? 'Done ✓' : 'Start here',
+    done: pDone,
+    onClick: () => openPractice(state.subject),
   }));
-  // Game 1 — once both Practice and Game 1 are done, show ranking page first
-  const g1 = state.games.find(g => g.slot === 'game1');
+
+  // Game 1
+  const g1 = state.games.find(g => g.slot === slotG1);
   tiles.appendChild(makeTile({
     label: g1 ? g1.name : 'Yesterday Me vs. Today Me',
     sub: 'Game 1 · Beat your own best score',
     ico:'⚡',
-    badge: state.game1Done ? 'Played ✓' : 'Game 1',
-    done: state.game1Done,
-    locked: !state.practiceDone,
+    badge: g1Done ? 'Played ✓' : 'Game 1',
+    done: g1Done,
+    locked: !pDone,
     lockedMsg: 'Finish Practice first to unlock Game 1.',
     onClick: () => {
-      if (state.practiceDone && state.game1Done) showRanking('game1', g1);
+      if (pDone && g1Done) showRanking('game1', g1);
       else openGame(g1.id);
     },
   }));
-  // Game 2 — also show ranking page first (once unlocked)
-  const g2 = state.games.find(g => g.slot === 'game2');
+
+  // Game 2
+  const g2 = state.games.find(g => g.slot === slotG2);
   tiles.appendChild(makeTile({
     label: g2 ? g2.name : 'Me vs. the Class',
     sub: 'Game 2 · Compare with your classmates',
     ico:'🏆',
     badge: 'Game 2',
-    locked: !state.game1Done,
+    locked: !g1Done,
     lockedMsg: 'Play Game 1 at least once to unlock Game 2.',
     onClick: () => {
-      if (state.game1Done) showRanking('game2', g2);
+      if (g1Done) showRanking('game2', g2);
       else openGame(g2.id);
     },
   }));
-  // Custom games (teacher-created), all unlocked once Game 1 is done
-  for (const g of state.games.filter(g => g.slot === 'custom')) {
-    tiles.appendChild(makeTile({
-      label: g.name, sub: `${g.duration_minutes} min · custom game`, ico:'🎯',
-      badge:'Custom',
-      locked: !state.game1Done,
-      lockedMsg: 'Play Game 1 first to unlock custom games.',
-      onClick: () => {
-        if (state.game1Done) showRanking('custom', g);
-        else openGame(g.id);
-      },
-    }));
+
+  // Custom games — only shown for the 2D Shapes subject for now
+  if (!isEf) {
+    for (const g of state.games.filter(g => g.slot === 'custom')) {
+      tiles.appendChild(makeTile({
+        label: g.name, sub: `${g.duration_minutes} min · custom game`, ico:'🎯',
+        badge:'Custom',
+        locked: !g1Done,
+        lockedMsg: 'Play Game 1 first to unlock custom games.',
+        onClick: () => {
+          if (g1Done) showRanking('custom', g);
+          else openGame(g.id);
+        },
+      }));
+    }
   }
 }
 async function renderPage2Avatar() {
   const slot = document.getElementById('page2-avatar');
   if (!slot || !window.AVATAR) return;
-  // Locked until Game 2 done — show the gender emoji
-  if (!state.game2Done) {
+  // Locked until Practice + Game 1 + Game 2 are all done — show the gender emoji
+  if (!isAvatarUnlocked()) {
     const isBoy = state.gender === 'boy';
     slot.style.background = isBoy ? '#cfeafd' : '#ffd6e6';
     slot.innerHTML = `<div class="gender-avatar" style="font-size:64px;">${isBoy ? '👦' : '👧'}</div>`;
@@ -510,20 +557,18 @@ function makeTile({label, sub, ico, badge, done, locked, lockedMsg, onClick}) {
   return el;
 }
 
-async function openPractice() {
-  // Pass the student id so the practice page can record the completion + score
-  // when it actually ends (Charlie screen). The end-of-practice handler is the
-  // authoritative place to mark completion — earlier we tried to fire-and-forget
-  // here, but on slow networks (Chromebooks) the request was being cancelled by
-  // the immediate navigation, so the completions row never landed.
+async function openPractice(subject) {
+  subject = subject || state.subject || '2dshapes';
   const params = new URLSearchParams({ from: 'student' });
   if (state.studentId) params.set('student', state.studentId);
-  window.location.href = 'geometry-quiz.html?' + params.toString();
+  // Send students to the right practice page for the chosen subject.
+  const target = (subject === 'ef1') ? 'ef1-practice.html' : 'geometry-quiz.html';
+  window.location.href = target + '?' + params.toString();
 }
 function openGame(gameId) {
   if (!gameId) return;
-  // Pass student + game ids to the game page via query string
   const q = new URLSearchParams({ student: state.studentId, game: gameId });
+  if (state.subject === 'ef1') q.set('subject', 'ef1');
   window.location.href = 'game.html?' + q.toString();
 }
 
@@ -712,13 +757,19 @@ async function renderAchievement() {
   $('ach-name').textContent = state.studentName || '';
   const av = $('ach-avatar');
   const tip = document.querySelector('.ach-edit-tip');
-  // Profile customisation is locked until the student finishes Game 2.
-  const unlocked = !!state.game2Done;
+  // Profile customisation is locked until the student has finished Practice +
+  // Game 1 + Game 2 (any subject combination counts).
+  const unlocked = isAvatarUnlocked();
   if (tip) {
     tip.style.display = '';
-    tip.textContent = unlocked
-      ? '👆 tap the picture to edit'
-      : '🎨 Beat Game 2 to unlock your own avatar maker!';
+    if (unlocked) {
+      tip.className = 'ach-edit-tip';
+      tip.textContent = '👆 tap the picture to edit';
+    } else {
+      // Show a friendly speech-balloon hint pointing at the avatar
+      tip.className = 'ach-edit-tip balloon';
+      tip.innerHTML = '💬 Do <b>Practice</b>, <b>Game 1</b> and <b>Game 2</b> to change your avatar!';
+    }
   }
   av.classList.toggle('locked', !unlocked);
   if (!unlocked) {
@@ -769,13 +820,29 @@ async function renderAchievement() {
   }
 }
 $('play-2dshapes').onclick = async () => {
+  state.subject = '2dshapes';
+  await renderPage2();
+  showScreen('screen-page2');
+};
+$('play-ef1').onclick = async () => {
+  state.subject = 'ef1';
   await renderPage2();
   showScreen('screen-page2');
 };
 $('ach-avatar').onclick = () => {
-  if (!state.game2Done) return;   // locked until Game 2 is completed
+  if (!isAvatarUnlocked()) return;
   openProfileMaker();
 };
+
+// Avatar unlocks once the student has completed Practice + Game 1 + Game 2 in
+// any single subject (or any combination across subjects — having done a
+// practice somewhere, a game1 somewhere, and a game2 somewhere all count).
+function isAvatarUnlocked() {
+  const anyP  = state.practiceDone || state.efPracticeDone;
+  const anyG1 = state.game1Done    || state.efGame1Done;
+  const anyG2 = state.game2Done    || state.efGame2Done;
+  return anyP && anyG1 && anyG2;
+}
 
 // ---------- Profile maker (matches uploaded reference) ----------
 let _pmProfile = null;
@@ -875,7 +942,9 @@ $('pm-save').onclick = async () => {
 (async () => {
   TTS.loadVoices(); // warm up voices list
   const sess = loadSession();
-  const goParam = new URLSearchParams(location.search).get('go'); // e.g. 'game1' or 'game2'
+  const urlParams = new URLSearchParams(location.search);
+  const goParam = urlParams.get('go'); // e.g. 'game1' or 'game2'
+  const subjectParam = urlParams.get('subject'); // e.g. 'ef1'
   if (sess && sess.id) {
     // Try to resume that student
     state.students = await DB.listStudents();
@@ -888,16 +957,30 @@ $('pm-save').onclick = async () => {
       state.practiceDone = await DB.hasCompleted(found.id, 'practice');
       state.game1Done    = await DB.hasCompleted(found.id, 'game1');
       state.game2Done    = await DB.hasCompleted(found.id, 'game2');
+      state.efPracticeDone = await DB.hasCompleted(found.id, 'practice_ef1');
+      state.efGame1Done    = await DB.hasCompleted(found.id, 'game1_ef1');
+      state.efGame2Done    = await DB.hasCompleted(found.id, 'game2_ef1');
       state.games        = await DB.listGames();
       updateWhoStrip();
-      // ?go=game1 (or game2) → auto-launch that game if it's unlocked
-      if (goParam === 'game1' && state.practiceDone) {
-        const g1 = state.games.find(g => g.slot === 'game1');
-        if (g1) { openGame(g1.id); return; }
+      // ?go=game1 / ?go=game2 (with optional &subject=ef1) → auto-launch
+      if (subjectParam === 'ef1') state.subject = 'ef1';
+      if (goParam === 'game1') {
+        const isEf = subjectParam === 'ef1';
+        const ready = isEf ? state.efPracticeDone : state.practiceDone;
+        if (ready) {
+          const slot = isEf ? 'game1_ef1' : 'game1';
+          const g1 = state.games.find(g => g.slot === slot);
+          if (g1) { openGame(g1.id); return; }
+        }
       }
-      if (goParam === 'game2' && state.game1Done) {
-        const g2 = state.games.find(g => g.slot === 'game2');
-        if (g2) { openGame(g2.id); return; }
+      if (goParam === 'game2') {
+        const isEf = subjectParam === 'ef1';
+        const ready = isEf ? state.efGame1Done : state.game1Done;
+        if (ready) {
+          const slot = isEf ? 'game2_ef1' : 'game2';
+          const g2 = state.games.find(g => g.slot === slot);
+          if (g2) { openGame(g2.id); return; }
+        }
       }
       await renderAchievement();
       showScreen('screen-achievement');
