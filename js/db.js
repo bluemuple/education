@@ -335,37 +335,70 @@
   //   challenge              — at least 1 game2 ('Me vs the Class') play
   //   warrior                — top 3 (best score per student) in any game1/game2/custom game
   //   effort                 — total of (practice + game) plays ≥ 7
-  // Pure helper: compute one student's badges from already-fetched data.
-  function computeBadges(student_id, allScores, allGames) {
+  // Subject → relevant game slots
+  const SUBJECT_SLOTS = {
+    '2dshapes': { practice:'practice',     game2:'game2',     keepCustom:true },
+    'ef1':      { practice:'practice_ef1', game2:'game2_ef1', keepCustom:false },
+  };
+  // Subject → thresholds. EF1 makes everything except the practice badge a
+  // little harder than 2D Shapes.
+  const BADGE_THRESHOLDS = {
+    '2dshapes': { betterMe:2, evenMargin:0, challenge:1, warriorMin:0,  effort:7  },
+    'ef1':      { betterMe:3, evenMargin:5, challenge:2, warriorMin:30, effort:10 },
+  };
+
+  // Pure helper: compute one student's badges for a SPECIFIC subject.
+  function computeBadges(student_id, allScores, allGames, subject) {
     const earned = new Set();
     if (!student_id) return earned;
-    const practiceGame = (allGames || []).find(g => g.slot === 'practice');
-    const myScores = (allScores || []).filter(s => s.student_id === student_id);
+    const subj = subject && SUBJECT_SLOTS[subject] ? subject : '2dshapes';
+    const slots = SUBJECT_SLOTS[subj];
+    const TH    = BADGE_THRESHOLDS[subj];
+
+    // Filter games and the student's scores to the subject in question
+    const subjGames = (allGames || []).filter(g => {
+      if (g.slot === slots.practice) return true;
+      if (g.slot === 'game1' || g.slot === 'game2') return subj === '2dshapes';
+      if (g.slot === 'game1_ef1' || g.slot === 'game2_ef1') return subj === 'ef1';
+      if (g.slot === 'custom') return slots.keepCustom;
+      return false;
+    });
+    const subjGameIds = new Set(subjGames.map(g => g.id));
+    const myScores = (allScores || []).filter(s => s.student_id === student_id && subjGameIds.has(s.game_id));
     if (!myScores.length) return earned;
 
+    const practiceGame = subjGames.find(g => g.slot === slots.practice);
     const isPractice = (s) => practiceGame && s.game_id === practiceGame.id;
     const myPractice = myScores.filter(isPractice);
     const myGame     = myScores.filter(s => !isPractice(s));
 
+    // 1) practice_makes_perfect — same easy bar across subjects
     if (myPractice.length >= 1) earned.add('practice_makes_perfect');
 
+    // 2) better_me — N+ scores in any single game
     const byGame = {};
     for (const s of myGame) (byGame[s.game_id] = byGame[s.game_id] || []).push(s);
-    if (Object.values(byGame).some(arr => arr.length >= 2)) earned.add('better_me');
+    if (Object.values(byGame).some(arr => arr.length >= TH.betterMe)) earned.add('better_me');
 
+    // 3) even_better_me — latest beat previous best by more than evenMargin
     for (const arr of Object.values(byGame)) {
       if (arr.length < 2) continue;
       const sorted = [...arr].sort((a,b) => (a.played_at||'').localeCompare(b.played_at||''));
       const latest = sorted[sorted.length - 1];
       const prevBest = Math.max(...sorted.slice(0, -1).map(x => x.score|0));
-      if ((latest.score|0) > prevBest) { earned.add('even_better_me'); break; }
+      if ((latest.score|0) > prevBest + TH.evenMargin) { earned.add('even_better_me'); break; }
     }
 
-    const game2 = (allGames || []).find(g => g.slot === 'game2');
-    if (game2 && myGame.some(s => s.game_id === game2.id)) earned.add('challenge');
+    // 4) challenge — played game2 at least N times
+    const game2 = subjGames.find(g => g.slot === slots.game2);
+    if (game2) {
+      const g2plays = myGame.filter(s => s.game_id === game2.id).length;
+      if (g2plays >= TH.challenge) earned.add('challenge');
+    }
 
-    for (const g of (allGames || [])) {
-      if (g.slot === 'practice') continue;
+    // 5) warrior — top 3 in any non-practice game ranking AND best score ≥ warriorMin
+    for (const g of subjGames) {
+      if (g.slot === slots.practice) continue;
       const gscores = (allScores || []).filter(s => s.game_id === g.id);
       if (!gscores.length) continue;
       const best = {};
@@ -373,29 +406,30 @@
         if (!best[s.student_id] || s.score > best[s.student_id].score) best[s.student_id] = s;
       }
       const ranking = Object.values(best).sort((a,b) => b.score - a.score);
-      if (ranking.slice(0, 3).some(s => s.student_id === student_id)) {
+      const myRow = ranking.find(s => s.student_id === student_id);
+      const myRank = ranking.findIndex(s => s.student_id === student_id);
+      if (myRow && myRank < 3 && (myRow.score|0) >= TH.warriorMin) {
         earned.add('warrior'); break;
       }
     }
 
-    if (myScores.length >= 7) earned.add('effort');
+    // 6) effort — total subject plays ≥ effort threshold
+    if (myScores.length >= TH.effort) earned.add('effort');
     return earned;
   }
 
-  async function getEarnedBadges(student_id) {
+  async function getEarnedBadges(student_id, subject) {
     if (!student_id) return new Set();
     const [scores, games] = await Promise.all([listScores(), listGames()]);
-    return computeBadges(student_id, scores, games);
+    return computeBadges(student_id, scores, games, subject || '2dshapes');
   }
 
-  // Fetches scores+games once and returns { studentId: Set(badgeIds) } for ALL
-  // students. Designed for the teacher panel so we don't re-query per row.
-  async function getEarnedBadgesAll() {
+  async function getEarnedBadgesAll(subject) {
     const [scores, games, students] = await Promise.all([
       listScores(), listGames(), listStudents(),
     ]);
     const result = {};
-    for (const s of students) result[s.id] = computeBadges(s.id, scores, games);
+    for (const s of students) result[s.id] = computeBadges(s.id, scores, games, subject || '2dshapes');
     return result;
   }
 

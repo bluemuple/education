@@ -293,8 +293,13 @@
     </div>
 
     <div class="ach-section">
-      <h3>🏅 2D Shapes Badges</h3>
+      <h3>📐 2D Shapes</h3>
       <div class="badge-grid" id="badge-grid"></div>
+    </div>
+
+    <div class="ach-section">
+      <h3>🍰 Equivalent Fractions 1</h3>
+      <div class="badge-grid" id="badge-grid-ef1"></div>
     </div>
   </section>
 
@@ -366,14 +371,48 @@ function showScreen(id) {
   TTS.stop();
 }
 
-function updateWhoStrip() {
+async function updateWhoStrip() {
   const strip = $('who-strip');
-  if (state.studentName) {
-    strip.innerHTML = `<span class="name">👋 ${escapeHtml(state.studentName)}</span> &nbsp; <button class="switch-link" id="switch-user">↩︎ Not me</button>`;
-    document.getElementById('switch-user').onclick = signOut;
-  } else {
-    strip.innerHTML = '';
+  if (!state.studentName) { strip.innerHTML = ''; return; }
+  // Tap-target = avatar + name; both bring the student back to the Achievement
+  // page. (The "Not me" button still appears on the right for switching users.)
+  strip.innerHTML = `
+    <button id="who-home" type="button" title="Back to my profile"
+            style="display:flex; align-items:center; gap:8px; background:transparent;
+                   border:none; cursor:pointer; padding:2px 4px; border-radius:10px;">
+      <span id="who-avatar"
+            style="width:34px; height:38px; display:inline-block; border:2px solid var(--ink);
+                   border-radius:8px; overflow:hidden; background:#fff; flex:0 0 auto;
+                   vertical-align:middle;"></span>
+      <span class="name">${escapeHtml(state.studentName)}</span>
+    </button>
+    &nbsp; <button class="switch-link" id="switch-user">↩︎ Not me</button>`;
+  // Hook up navigation: tapping the avatar OR the name returns to Achievement
+  document.getElementById('who-home').onclick = goHome;
+  document.getElementById('switch-user').onclick = signOut;
+
+  // Fill the tiny avatar (saved profile if there is one, else gender emoji)
+  const slot = document.getElementById('who-avatar');
+  if (slot) {
+    let profile = null;
+    if (state.studentId && DB.getStudentProfile) {
+      try { profile = await DB.getStudentProfile(state.studentId); } catch(e){}
+    }
+    if (profile && window.AVATAR) {
+      slot.innerHTML = window.AVATAR.render(profile);
+    } else {
+      const isBoy = state.gender === 'boy';
+      slot.style.background = isBoy ? '#cfeafd' : '#ffd6e6';
+      slot.innerHTML = `<div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%; font-size:22px;">${isBoy ? '👦' : '👧'}</div>`;
+    }
   }
+}
+
+// Navigates back to the Achievement page (re-renders so badges/avatar refresh)
+async function goHome() {
+  if (!state.studentId) return;
+  await renderAchievement();
+  showScreen('screen-achievement');
 }
 
 // ---------- gender pick ----------
@@ -732,15 +771,15 @@ const BADGE_DEFS = [
     desc:'You played Practice or Games 7 or more times. That is serious effort.' },
 ];
 
-function showBadgeModal(def) {
+function showBadgeModal(def, subject, basePath) {
   if (document.getElementById('badge-modal')) return;
+  const base = basePath || (subject === 'ef1' ? 'Badges/Fractions' : 'Badges/2D%20Shapes');
   const shade = document.createElement('div');
   shade.className = 'modal-shade';
   shade.id = 'badge-modal';
-  const BADGES_BASE_LOCAL = 'Badges/2D%20Shapes';
   shade.innerHTML = `
     <div class="modal" style="max-width:360px;">
-      <img src="${BADGES_BASE_LOCAL}/${def.img}" alt="${escapeHtml(def.label)}"
+      <img src="${base}/${def.img}" alt="${escapeHtml(def.label)}"
            style="width:120px; height:120px; object-fit:contain; margin:0 auto 6px; display:block;"
            onerror="this.replaceWith(Object.assign(document.createElement('div'),{innerHTML:'${def.emoji}',style:'font-size:64px; margin:8px 0;'}))" />
       <h3 style="margin:0 0 8px;">${escapeHtml(def.label)}</h3>
@@ -790,17 +829,26 @@ async function renderAchievement() {
           onerror="this.parentNode.style.background='#fff'; this.parentNode.innerHTML='${fallback}'" />`;
     }
   }
-  // Badges
-  const grid = $('badge-grid'); grid.innerHTML = '';
+  // Render both subject badge sections, then check for newly-earned badges and
+  // pop a celebration modal.
+  await renderBadgeGrid('badge-grid',     '2dshapes', 'Badges/2D%20Shapes');
+  await renderBadgeGrid('badge-grid-ef1', 'ef1',      'Badges/Fractions');
+  await checkNewBadges();
+}
+
+// Render the grid for one subject. Earned badges → image cards (clickable for
+// the description modal). No badges yet → "no-badge.png" placeholder.
+async function renderBadgeGrid(elemId, subject, basePath) {
+  const grid = $(elemId); if (!grid) return;
+  grid.innerHTML = '';
   let earned = new Set();
   if (DB.getEarnedBadges) {
-    try { earned = await DB.getEarnedBadges(state.studentId); } catch(e){ earned = new Set(); }
+    try { earned = await DB.getEarnedBadges(state.studentId, subject); } catch(e){ earned = new Set(); }
   }
-  const BADGES_BASE = 'Badges/2D%20Shapes';
   if (!earned.size) {
     const card = document.createElement('div');
     card.className = 'badge-card';
-    card.innerHTML = `<img src="${BADGES_BASE}/no-badge.png" alt="No badges yet"
+    card.innerHTML = `<img src="${basePath}/no-badge.png" alt="No badges yet"
                        onerror="this.replaceWith(Object.assign(document.createElement('div'),{innerHTML:'🎖',style:'font-size:48px; padding:20px 0;'}))" />
                       <div class="lbl">No badges yet</div>`;
     grid.appendChild(card);
@@ -812,12 +860,80 @@ async function renderAchievement() {
     card.className = 'badge-card';
     card.style.cursor = 'pointer';
     card.title = 'Tap to see why you earned this';
-    card.innerHTML = `<img src="${BADGES_BASE}/${def.img}" alt="${escapeHtml(def.label)}"
+    card.innerHTML = `<img src="${basePath}/${def.img}" alt="${escapeHtml(def.label)}"
                        onerror="this.replaceWith(Object.assign(document.createElement('div'),{innerHTML:'${def.emoji}',style:'font-size:48px; padding:20px 0;'}))" />
                       <div class="lbl">${escapeHtml(def.label)}</div>`;
-    card.onclick = () => showBadgeModal(def);
+    // Pass subject to the modal so the right artwork renders
+    card.onclick = () => showBadgeModal(def, subject, basePath);
     grid.appendChild(card);
   }
+}
+
+// ---------- Newly-earned badge celebration ----------
+// Compares the currently-earned set (per subject) against what was last shown
+// to this student on this device. Any new ids → queue a celebration popup.
+// First ever visit (no localStorage key yet) silently syncs without popping —
+// avoids a popup flood for students who already had badges before this feature.
+async function checkNewBadges() {
+  if (!state.studentId) return;
+  const subjects = [
+    { id:'2dshapes', label:'2D Shapes',                base:'Badges/2D%20Shapes' },
+    { id:'ef1',      label:'Equivalent Fractions 1',   base:'Badges/Fractions'   },
+  ];
+  for (const s of subjects) {
+    try {
+      const seenKey = `mg.badges.seen.${s.id}.${state.studentId}`;
+      const stored = localStorage.getItem(seenKey);
+      let earned;
+      try { earned = await DB.getEarnedBadges(state.studentId, s.id); }
+      catch(err) { console.warn('getEarnedBadges failed for', s.id, err); continue; }
+
+      if (stored === null) {
+        // First time we've seen this student on this device — record silently.
+        try { localStorage.setItem(seenKey, JSON.stringify([...earned])); } catch(e){}
+        continue;
+      }
+
+      const seen = new Set(JSON.parse(stored));
+      const newOnes = [...earned].filter(id => !seen.has(id));
+      if (!newOnes.length) continue;
+
+      for (const id of newOnes) {
+        const def = BADGE_DEFS.find(d => d.id === id);
+        if (!def) continue;
+        await showBadgeGainedModal(def, s.label, s.base);
+      }
+      const updated = new Set([...seen, ...earned]);
+      try { localStorage.setItem(seenKey, JSON.stringify([...updated])); } catch(e){}
+    } catch (err) {
+      console.warn('checkNewBadges error for', s.id, err);
+    }
+  }
+}
+
+function showBadgeGainedModal(def, subjectLabel, basePath) {
+  return new Promise((resolve) => {
+    if (document.getElementById('badge-gained-modal')) { resolve(); return; }
+    const shade = document.createElement('div');
+    shade.className = 'modal-shade';
+    shade.id = 'badge-gained-modal';
+    shade.innerHTML = `
+      <div class="modal" style="max-width:380px; text-align:center;">
+        <div style="font-size:34px; margin-bottom:6px;">🎉🎊🎉</div>
+        <h3 style="margin:0 0 4px;">Congratulations!</h3>
+        <p style="font-weight:700; margin:0 0 10px; color:var(--muted);">You earned a new ${escapeHtml(subjectLabel)} badge!</p>
+        <img src="${basePath}/${def.img}" alt="${escapeHtml(def.label)}"
+             style="width:140px; height:140px; object-fit:contain; margin:6px auto; display:block;"
+             onerror="this.replaceWith(Object.assign(document.createElement('div'),{innerHTML:'${def.emoji}',style:'font-size:80px; margin:8px 0;'}))" />
+        <h4 style="margin:6px 0 4px; color:var(--primary-ink); font-size:20px;">${escapeHtml(def.label)}</h4>
+        <p style="font-weight:700; line-height:1.4;">${escapeHtml(def.desc)}</p>
+        <div class="yn-row" style="justify-content:center; margin-top:14px;">
+          <button class="btn good" id="badge-gained-close">Awesome!</button>
+        </div>
+      </div>`;
+    document.body.appendChild(shade);
+    document.getElementById('badge-gained-close').onclick = () => { shade.remove(); resolve(); };
+  });
 }
 $('play-2dshapes').onclick = async () => {
   state.subject = '2dshapes';
@@ -935,6 +1051,7 @@ $('pm-save').onclick = async () => {
     try { await DB.setStudentProfile(state.studentId, _pmProfile); } catch(e){}
   }
   await renderAchievement();
+  updateWhoStrip();      // refresh the tiny avatar in the header
   showScreen('screen-achievement');
 };
 

@@ -7,8 +7,12 @@
 // Visuals are tiny inline SVG fraction models rendered by helpers below.
 // Question types: 'mc' (4 options) and 'sa' (short answer).
 
-window.EF1_LEVEL_POINTS = { 1:2, 2:4, 3:6, 4:8 };
-window.EF1_MAX_LEVEL = 4;
+// Practice uses 4 levels (Day 1 only). Game uses 5 levels — the 5th is reserved
+// for Day 2 mastery questions (numerical method).
+window.EF1_LEVEL_POINTS      = { 1:2, 2:4, 3:6, 4:8 };
+window.EF1_MAX_LEVEL         = 4;
+window.EF1_GAME_LEVEL_POINTS = { 1:2, 2:4, 3:6, 4:8, 5:10 };
+window.EF1_GAME_MAX_LEVEL    = 5;
 
 // ---- Visual helpers -----------------------------------------------------
 function _ef1Pie(num, den, color = '#3aa0dc') {
@@ -268,8 +272,42 @@ window.EF1_GAME_QUESTIONS = [
     options:['2/8','1/4','1/2','3/4'], answer:1 },
   { id:'G4q07', level:4, type:'mc', text:'Pick the equivalent of 4/12.',
     options:['1/3','1/4','2/3','1/2'], answer:0 },
+
+  // ----- L5 (10) — Day 2: NUMERICAL method (×/÷ same on top & bottom) -----
+  { id:'G5q01', level:5, type:'mc',
+    text:'To make 1/2 equal to 2/4, multiply the top AND bottom by what number?',
+    options:['2','3','4','5'], answer:0 },
+  { id:'G5q02', level:5, type:'mc',
+    text:'To simplify 6/8 to 3/4, we DIVIDE the top and bottom by what?',
+    options:['2','3','4','6'], answer:0 },
+  { id:'G5q03', level:5, type:'sa',
+    text:'Solve  1/2 × 3/3 = ?  (write like 3/6)',
+    answer:'3/6' },
+  { id:'G5q04', level:5, type:'sa',
+    text:'Simplify by dividing top and bottom by 2:  4/6 = ?  (write like 2/3)',
+    answer:'2/3' },
+  { id:'G5q05', level:5, type:'mc',
+    text:'To make 2/3 equal to 6/9, multiply top AND bottom by what?',
+    options:['2','3','6','9'], answer:1 },
+  { id:'G5q06', level:5, type:'mc',
+    text:'Why is multiplying a fraction by 2/2 (or 3/3, or any same/same) okay?',
+    options:['It changes the fraction','Same on top and bottom equals 1, so the size stays the same','It always makes the fraction bigger','It always simplifies the fraction'],
+    answer:1 },
+  { id:'G5q07', level:5, type:'mc',
+    text:'Complete:  3/4 = ?/12',
+    options:['6','8','9','12'], answer:2 },
+  { id:'G5q08', level:5, type:'sa',
+    text:'Complete (divide top and bottom by 4):  8/12 = ?/3',
+    answer:'2' },
+  { id:'G5q09', level:5, type:'mc',
+    text:'Which is the FASTEST way to make 1/2 equal to 5/10?',
+    options:['Add 4 to top and 8 to bottom','Multiply top and bottom by 5','Multiply top by 5 only','Subtract from each'],
+    answer:1 },
+  { id:'G5q10', level:5, type:'sa',
+    text:'Simplify 10/15 by dividing top and bottom by 5. (write like 2/3)',
+    answer:'2/3' },
 ];
 
 // Per-level quick lookup
 window.EF1_PRACTICE_BY_LEVEL = (() => { const m = {1:[],2:[],3:[],4:[]}; for (const q of window.EF1_PRACTICE_QUESTIONS) m[q.level].push(q); return m; })();
-window.EF1_GAME_BY_LEVEL     = (() => { const m = {1:[],2:[],3:[],4:[]}; for (const q of window.EF1_GAME_QUESTIONS)     m[q.level].push(q); return m; })();
+window.EF1_GAME_BY_LEVEL     = (() => { const m = {1:[],2:[],3:[],4:[],5:[]}; for (const q of window.EF1_GAME_QUESTIONS) m[q.level].push(q); return m; })();
