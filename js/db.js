@@ -81,6 +81,10 @@
     { slot:'game1_ef1',    name:'EF1 · Yesterday Me vs. Today Me', duration_minutes:2 },
     { slot:'game2_ef1',    name:'EF1 · Me vs. the Class',           duration_minutes:2 },
     { slot:'practice_ef1', name:'EF1 · Practice',                    duration_minutes:0 },
+    // Equivalent Fractions Day 2
+    { slot:'game1_ef2',    name:'EF2 · Yesterday Me vs. Today Me', duration_minutes:2 },
+    { slot:'game2_ef2',    name:'EF2 · Me vs. the Class',           duration_minutes:2 },
+    { slot:'practice_ef2', name:'EF2 · Practice',                    duration_minutes:0 },
   ];
   async function listGames() {
     if (useSupabase) {
@@ -337,14 +341,16 @@
   //   effort                 — total of (practice + game) plays ≥ 7
   // Subject → relevant game slots
   const SUBJECT_SLOTS = {
-    '2dshapes': { practice:'practice',     game2:'game2',     keepCustom:true },
+    '2dshapes': { practice:'practice',     game2:'game2',     keepCustom:true  },
     'ef1':      { practice:'practice_ef1', game2:'game2_ef1', keepCustom:false },
+    'ef2':      { practice:'practice_ef2', game2:'game2_ef2', keepCustom:false },
   };
   // Subject → thresholds. EF1 makes everything except the practice badge a
-  // little harder than 2D Shapes.
+  // little harder than 2D Shapes. EF2 matches EF1.
   const BADGE_THRESHOLDS = {
     '2dshapes': { betterMe:2, evenMargin:0, challenge:1, warriorMin:0,  effort:7  },
     'ef1':      { betterMe:3, evenMargin:5, challenge:2, warriorMin:30, effort:10 },
+    'ef2':      { betterMe:3, evenMargin:5, challenge:2, warriorMin:30, effort:10 },
   };
 
   // Pure helper: compute one student's badges for a SPECIFIC subject.
@@ -360,6 +366,7 @@
       if (g.slot === slots.practice) return true;
       if (g.slot === 'game1' || g.slot === 'game2') return subj === '2dshapes';
       if (g.slot === 'game1_ef1' || g.slot === 'game2_ef1') return subj === 'ef1';
+      if (g.slot === 'game1_ef2' || g.slot === 'game2_ef2') return subj === 'ef2';
       if (g.slot === 'custom') return slots.keepCustom;
       return false;
     });

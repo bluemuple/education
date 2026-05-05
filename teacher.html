@@ -213,6 +213,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase-config.js"></script>
 <script src="js/db.js"></script>
+<script src="js/avatar.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 let _students = [], _games = [], _scores = [];
@@ -298,9 +299,15 @@ async function refreshStudents() {
       badge = ` <span class="dev-badge" title="This name has been used on ${count} different devices/browsers">⚠ ${count} devices</span>`;
     }
     const earned = (allBadges || {})[s.id] || new Set();
+    // Parse the saved profile JSON (may be null) and render the avatar if present
+    let profile = null;
+    try { if (s.profile) profile = JSON.parse(s.profile); } catch(e){}
+    const genderCell = (profile && window.AVATAR)
+      ? `<div style="width:48px; height:54px; border:2px solid var(--ink); border-radius:8px; overflow:hidden; background:#fff; display:inline-flex; align-items:center; justify-content:center;">${window.AVATAR.render(profile)}</div>`
+      : (s.gender === 'boy' ? '👦 Boy' : '👧 Girl');
     tr.innerHTML = `
       <td><b>${escapeHtml(s.name)}</b>${badge}</td>
-      <td>${s.gender === 'boy' ? '👦 Boy' : '👧 Girl'}</td>
+      <td>${genderCell}</td>
       <td>${renderBadgeRow(earned)}</td>
       <td style="text-align:right;"><button class="btn small danger">Delete</button></td>`;
     tr.querySelector('button').onclick = async () => {

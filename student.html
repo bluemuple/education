@@ -22,8 +22,12 @@
                background:#fff; border:3px solid var(--ink); border-radius:18px;
                padding:10px 14px; box-shadow:var(--shadow); margin-bottom:16px; }
   .title { font-size:20px; font-weight:900; }
-  .who { font-weight:800; font-size:13px; }
-  .who .name { color:var(--primary-ink); }
+  .who { font-weight:800; font-size:13px;
+         display:flex; align-items:center; gap:8px; flex-wrap:nowrap; }
+  .who .name { color:var(--primary-ink); white-space:nowrap; }
+  .who #who-home { display:flex; align-items:center; gap:8px; flex:0 0 auto; }
+  .who #who-avatar { flex:0 0 auto; }
+  .who #switch-user { flex:0 0 auto; white-space:nowrap; }
 
   .card { background:var(--card); border:3px solid var(--ink); border-radius:20px;
           padding:22px; box-shadow:var(--shadow); }
@@ -288,6 +292,9 @@
         <button class="play-btn" id="play-ef1">
           <span class="ic">🍰</span><span>Equivalent Fractions 1</span>
         </button>
+        <button class="play-btn" id="play-ef2">
+          <span class="ic">🎂</span><span>Equivalent Fractions 2</span>
+        </button>
       </div>
       <p class="empty" style="font-size:12px;">More buttons coming soon!</p>
     </div>
@@ -300,6 +307,11 @@
     <div class="ach-section">
       <h3>🍰 Equivalent Fractions 1</h3>
       <div class="badge-grid" id="badge-grid-ef1"></div>
+    </div>
+
+    <div class="ach-section">
+      <h3>🎂 Equivalent Fractions 2</h3>
+      <div class="badge-grid" id="badge-grid-ef2"></div>
     </div>
   </section>
 
@@ -354,7 +366,10 @@ let state = {
   efPracticeDone: false,
   efGame1Done: false,
   efGame2Done: false,
-  subject: '2dshapes',  // which subject the Page 2 tiles are showing
+  ef2PracticeDone: false,
+  ef2Game1Done: false,
+  ef2Game2Done: false,
+  subject: '2dshapes',  // which subject the Page 2 tiles are showing — '2dshapes' | 'ef1' | 'ef2'
 };
 
 // On returning from a quiz, restore the chosen student
@@ -378,15 +393,15 @@ async function updateWhoStrip() {
   // page. (The "Not me" button still appears on the right for switching users.)
   strip.innerHTML = `
     <button id="who-home" type="button" title="Back to my profile"
-            style="display:flex; align-items:center; gap:8px; background:transparent;
-                   border:none; cursor:pointer; padding:2px 4px; border-radius:10px;">
+            style="background:transparent; border:none; cursor:pointer;
+                   padding:2px 4px; border-radius:10px;">
       <span id="who-avatar"
-            style="width:34px; height:38px; display:inline-block; border:2px solid var(--ink);
-                   border-radius:8px; overflow:hidden; background:#fff; flex:0 0 auto;
-                   vertical-align:middle;"></span>
+            style="width:34px; height:38px; display:inline-flex; align-items:center;
+                   justify-content:center; border:2px solid var(--ink); border-radius:8px;
+                   overflow:hidden; background:#fff; vertical-align:middle;"></span>
       <span class="name">${escapeHtml(state.studentName)}</span>
     </button>
-    &nbsp; <button class="switch-link" id="switch-user">↩︎ Not me</button>`;
+    <button class="switch-link" id="switch-user">↩︎ Not me</button>`;
   // Hook up navigation: tapping the avatar OR the name returns to Achievement
   document.getElementById('who-home').onclick = goHome;
   document.getElementById('switch-user').onclick = signOut;
@@ -463,6 +478,9 @@ $('confirm-yes').onclick = async () => {
   state.efPracticeDone = await DB.hasCompleted(state.studentId, 'practice_ef1');
   state.efGame1Done    = await DB.hasCompleted(state.studentId, 'game1_ef1');
   state.efGame2Done    = await DB.hasCompleted(state.studentId, 'game2_ef1');
+  state.ef2PracticeDone = await DB.hasCompleted(state.studentId, 'practice_ef2');
+  state.ef2Game1Done    = await DB.hasCompleted(state.studentId, 'game1_ef2');
+  state.ef2Game2Done    = await DB.hasCompleted(state.studentId, 'game2_ef2');
   state.games        = await DB.listGames();
   updateWhoStrip();
   // Land on the Achievement page first (avatar, Let's Play, Badges)
@@ -492,12 +510,15 @@ async function renderPage2() {
   await renderPage2Avatar();
 
   // Subject-aware slot prefixes / completion flags
-  const isEf  = state.subject === 'ef1';
-  const slotP = isEf ? 'practice_ef1' : 'practice';
-  const slotG1 = isEf ? 'game1_ef1' : 'game1';
-  const slotG2 = isEf ? 'game2_ef1' : 'game2';
-  const pDone  = isEf ? state.efPracticeDone : state.practiceDone;
-  const g1Done = isEf ? state.efGame1Done    : state.game1Done;
+  const subj = state.subject;
+  const isEf  = (subj === 'ef1' || subj === 'ef2');
+  const isEf1 = subj === 'ef1';
+  const isEf2 = subj === 'ef2';
+  const slotP = isEf2 ? 'practice_ef2' : isEf1 ? 'practice_ef1' : 'practice';
+  const slotG1 = isEf2 ? 'game1_ef2' : isEf1 ? 'game1_ef1' : 'game1';
+  const slotG2 = isEf2 ? 'game2_ef2' : isEf1 ? 'game2_ef1' : 'game2';
+  const pDone  = isEf2 ? state.ef2PracticeDone : isEf1 ? state.efPracticeDone : state.practiceDone;
+  const g1Done = isEf2 ? state.ef2Game1Done    : isEf1 ? state.efGame1Done    : state.game1Done;
 
   // Practice tile — opens the right practice page for this subject
   tiles.appendChild(makeTile({
@@ -541,7 +562,7 @@ async function renderPage2() {
   }));
 
   // Custom games — only shown for the 2D Shapes subject for now
-  if (!isEf) {
+  if (subj === '2dshapes') {
     for (const g of state.games.filter(g => g.slot === 'custom')) {
       tiles.appendChild(makeTile({
         label: g.name, sub: `${g.duration_minutes} min · custom game`, ico:'🎯',
@@ -601,13 +622,17 @@ async function openPractice(subject) {
   const params = new URLSearchParams({ from: 'student' });
   if (state.studentId) params.set('student', state.studentId);
   // Send students to the right practice page for the chosen subject.
-  const target = (subject === 'ef1') ? 'ef1-practice.html' : 'geometry-quiz.html';
+  const target =
+    (subject === 'ef2') ? 'ef2-practice.html' :
+    (subject === 'ef1') ? 'ef1-practice.html' :
+    'geometry-quiz.html';
   window.location.href = target + '?' + params.toString();
 }
 function openGame(gameId) {
   if (!gameId) return;
   const q = new URLSearchParams({ student: state.studentId, game: gameId });
   if (state.subject === 'ef1') q.set('subject', 'ef1');
+  else if (state.subject === 'ef2') q.set('subject', 'ef2');
   window.location.href = 'game.html?' + q.toString();
 }
 
@@ -669,7 +694,11 @@ async function showRanking(slot, game) {
   // Wire the three buttons
   $('rank-play').onclick = () => openGame(game.id);
   $('rank-back').onclick = () => showScreen('screen-page2');
-  const g2 = state.games.find(g => g.slot === 'game2');
+  const g2Slot =
+    (state.subject === 'ef2') ? 'game2_ef2' :
+    (state.subject === 'ef1') ? 'game2_ef1' :
+    'game2';
+  const g2 = state.games.find(g => g.slot === g2Slot);
   const goG2 = $('rank-go-g2');
   if (slot === 'game2' || !g2) {
     // Already on Game 2's ranking — hide the redundant button
@@ -833,6 +862,7 @@ async function renderAchievement() {
   // pop a celebration modal.
   await renderBadgeGrid('badge-grid',     '2dshapes', 'Badges/2D%20Shapes');
   await renderBadgeGrid('badge-grid-ef1', 'ef1',      'Badges/Fractions');
+  await renderBadgeGrid('badge-grid-ef2', 'ef2',      'Badges/Fractions');
   await checkNewBadges();
 }
 
@@ -879,6 +909,7 @@ async function checkNewBadges() {
   const subjects = [
     { id:'2dshapes', label:'2D Shapes',                base:'Badges/2D%20Shapes' },
     { id:'ef1',      label:'Equivalent Fractions 1',   base:'Badges/Fractions'   },
+    { id:'ef2',      label:'Equivalent Fractions 2',   base:'Badges/Fractions'   },
   ];
   for (const s of subjects) {
     try {
@@ -945,6 +976,11 @@ $('play-ef1').onclick = async () => {
   await renderPage2();
   showScreen('screen-page2');
 };
+$('play-ef2').onclick = async () => {
+  state.subject = 'ef2';
+  await renderPage2();
+  showScreen('screen-page2');
+};
 $('ach-avatar').onclick = () => {
   if (!isAvatarUnlocked()) return;
   openProfileMaker();
@@ -954,9 +990,9 @@ $('ach-avatar').onclick = () => {
 // any single subject (or any combination across subjects — having done a
 // practice somewhere, a game1 somewhere, and a game2 somewhere all count).
 function isAvatarUnlocked() {
-  const anyP  = state.practiceDone || state.efPracticeDone;
-  const anyG1 = state.game1Done    || state.efGame1Done;
-  const anyG2 = state.game2Done    || state.efGame2Done;
+  const anyP  = state.practiceDone || state.efPracticeDone || state.ef2PracticeDone;
+  const anyG1 = state.game1Done    || state.efGame1Done    || state.ef2Game1Done;
+  const anyG2 = state.game2Done    || state.efGame2Done    || state.ef2Game2Done;
   return anyP && anyG1 && anyG2;
 }
 
@@ -1077,24 +1113,30 @@ $('pm-save').onclick = async () => {
       state.efPracticeDone = await DB.hasCompleted(found.id, 'practice_ef1');
       state.efGame1Done    = await DB.hasCompleted(found.id, 'game1_ef1');
       state.efGame2Done    = await DB.hasCompleted(found.id, 'game2_ef1');
+      state.ef2PracticeDone = await DB.hasCompleted(found.id, 'practice_ef2');
+      state.ef2Game1Done    = await DB.hasCompleted(found.id, 'game1_ef2');
+      state.ef2Game2Done    = await DB.hasCompleted(found.id, 'game2_ef2');
       state.games        = await DB.listGames();
       updateWhoStrip();
-      // ?go=game1 / ?go=game2 (with optional &subject=ef1) → auto-launch
+      // ?go=game1 / ?go=game2 (with optional &subject=ef1|ef2) → auto-launch
       if (subjectParam === 'ef1') state.subject = 'ef1';
+      else if (subjectParam === 'ef2') state.subject = 'ef2';
       if (goParam === 'game1') {
-        const isEf = subjectParam === 'ef1';
-        const ready = isEf ? state.efPracticeDone : state.practiceDone;
+        const isEf2 = subjectParam === 'ef2';
+        const isEf1 = subjectParam === 'ef1';
+        const ready = isEf2 ? state.ef2PracticeDone : isEf1 ? state.efPracticeDone : state.practiceDone;
         if (ready) {
-          const slot = isEf ? 'game1_ef1' : 'game1';
+          const slot = isEf2 ? 'game1_ef2' : isEf1 ? 'game1_ef1' : 'game1';
           const g1 = state.games.find(g => g.slot === slot);
           if (g1) { openGame(g1.id); return; }
         }
       }
       if (goParam === 'game2') {
-        const isEf = subjectParam === 'ef1';
-        const ready = isEf ? state.efGame1Done : state.game1Done;
+        const isEf2 = subjectParam === 'ef2';
+        const isEf1 = subjectParam === 'ef1';
+        const ready = isEf2 ? state.ef2Game1Done : isEf1 ? state.efGame1Done : state.game1Done;
         if (ready) {
-          const slot = isEf ? 'game2_ef1' : 'game2';
+          const slot = isEf2 ? 'game2_ef2' : isEf1 ? 'game2_ef1' : 'game2';
           const g2 = state.games.find(g => g.slot === slot);
           if (g2) { openGame(g2.id); return; }
         }
