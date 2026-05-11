@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Fraction and Decimal</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    margin: 0; padding: 0;
+    background: #f5f5f8; color: #222;
+  }
+  .header {
+    background: #7a1f4f; color: white;
+    padding: 10px 20px;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  .header-title { font-size: 22px; font-weight: 700; }
+
+  /* Per-area toggle pills in the header (top-left) */
+  .area-toggles { display: flex; gap: 6px; flex-wrap: wrap; }
+  .area-tog {
+    background: rgba(255,255,255,0.10);
+    border: 1.5px solid rgba(255,255,255,0.35);
+    color: rgba(255,255,255,0.6);
+    border-radius: 999px;
+    padding: 4px 11px;
+    font-size: 12px; font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .area-tog.active {
+    background: white;
+    color: #7a1f4f;
+    border-color: white;
+  }
+  .area-tog:hover { filter: brightness(1.08); }
+
+  /* Decimal section (top, full-width with number line) */
+  .decimal-section {
+    background: white;
+    margin: 22px auto 14px;
+    max-width: 1400px;
+    border-radius: 14px;
+    padding: 18px 32px 22px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    text-align: center;
+  }
+  .decimal-section h2 {
+    font-size: 22px; font-weight: 600; margin: 0 0 10px 0; color: #333;
+  }
+  .number-line-wrap {
+    width: 100%;
+    max-width: 1000px;
+    margin: 0 auto 6px;
+  }
+  .number-line-wrap.hidden { visibility: hidden; }
+  #number-line-svg { width: 100%; height: auto; display: block; }
+  .decimal-display { display: flex; flex-direction: row; align-items: center; justify-content: center; min-height: 60px; }
+  .decimal-display.hidden { visibility: hidden; }
+
+  /* Three fraction columns */
+  .container {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 22px;
+    padding: 0 28px 28px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  @media (max-width: 980px) {
+    .container { grid-template-columns: 1fr; }
+  }
+  .section {
+    background: white;
+    border-radius: 14px;
+    padding: 24px 18px 20px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .section h2 {
+    font-size: 22px; font-weight: 600; margin: 0 0 18px 0; color: #333;
+  }
+
+  /* Diagrams */
+  .diagram {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 280px;
+    margin-bottom: 14px;
+  }
+  .diagram.hidden { visibility: hidden; }
+  .table { display: grid; gap: 0; }
+  .cell {
+    border: 1.5px solid #2b2b2b;
+    background: white;
+    transition: background-color 0.45s ease;
+    margin: -0.75px;
+  }
+  #pizza-svg { width: 260px; height: 260px; max-width: 100%; }
+  .slice { transition: fill 0.55s ease; }
+  .pepperoni { transition: opacity 0.35s ease; }
+
+  /* Draggable pika handle on number line */
+  .pika-handle { cursor: grab; }
+  .pika-handle:hover image { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25)); }
+  .pika-handle.dragging { cursor: grabbing; transition: none !important; }
+
+  /* Fraction/decimal display */
+  .display {
+    display: flex; flex-direction: column; align-items: center;
+    min-height: 110px; justify-content: center; margin-bottom: 4px;
+  }
+  .display.hidden { visibility: hidden; }
+  .display input, .decimal-display input {
+    width: 88px;
+    text-align: center;
+    font-size: 28px;
+    font-weight: 700;
+    border: 2px dashed #b8b8b8;
+    border-radius: 6px;
+    background: white;
+    padding: 4px 6px;
+    outline: none;
+    font-family: inherit;
+    color: #1a1a1a;
+    -moz-appearance: textfield;
+  }
+  .display input::-webkit-outer-spin-button,
+  .display input::-webkit-inner-spin-button,
+  .decimal-display input::-webkit-outer-spin-button,
+  .decimal-display input::-webkit-inner-spin-button {
+    -webkit-appearance: none; margin: 0;
+  }
+  .display input:focus, .decimal-display input:focus {
+    border-color: #7a1f4f; border-style: solid;
+  }
+  .frac-line { width: 78px; height: 2.5px; background: #1a1a1a; margin: 5px 0; }
+
+  /* Buttons */
+  .buttons {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .btn {
+    padding: 8px 14px;
+    border: 1.5px solid #d0d0d0;
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: #444;
+    transition: all 0.15s ease;
+    min-width: 120px;
+  }
+  .btn:hover { border-color: #888; background: #f7f7f7; }
+  .btn.active { background: #7a1f4f; color: white; border-color: #7a1f4f; }
+
+  .hint {
+    text-align: center;
+    color: #888;
+    font-size: 13px;
+    padding: 0 28px 12px;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="area-toggles">
+    <button class="area-tog active" data-area="decimal">Decimal</button>
+    <button class="area-tog active" data-area="fraction">Fraction</button>
+    <button class="area-tog active" data-area="equivalent">Equivalent</button>
+    <button class="area-tog active" data-area="pizza">Pizza</button>
+  </div>
+  <span class="header-title">Fraction and Decimal</span>
+</div>
+<div class="hint">Edit any numerator, denominator, or decimal — all four diagrams sync. You can also drag Pikachu along the number line.</div>
+
+<!-- Decimal section -->
+<div class="decimal-section">
+  <h2>Decimal</h2>
+  <div class="number-line-wrap" id="number-line-wrap">
+    <svg id="number-line-svg" viewBox="0 0 1000 130" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+  <div class="decimal-display" id="display-decimal">
+    <input type="number" id="decimal" value="0.5" step="0.05" min="0" max="1" />
+  </div>
+  <div class="buttons">
+    <button class="btn" id="hide-diagram-decimal">Hide Diagram</button>
+    <button class="btn" id="hide-number-decimal">Hide Number</button>
+  </div>
+</div>
+
+<!-- Three columns -->
+<div class="container">
+  <!-- Fraction -->
+  <div class="section" id="section-fraction">
+    <h2>Fraction</h2>
+    <div class="diagram" id="diagram-fraction">
+      <div class="table" id="fraction-table"></div>
+    </div>
+    <div class="display" id="display-fraction">
+      <input type="number" id="numerator" value="1" min="0" max="20" />
+      <div class="frac-line"></div>
+      <input type="number" id="denominator" value="2" min="1" max="20" />
+    </div>
+    <div class="buttons">
+      <button class="btn" id="hide-diagram-fraction">Hide Diagram</button>
+      <button class="btn" id="hide-number-fraction">Hide Number</button>
+    </div>
+  </div>
+
+  <!-- Equivalent Fraction -->
+  <div class="section" id="section-equivalent">
+    <h2>Equivalent Fraction</h2>
+    <div class="diagram" id="diagram-equivalent">
+      <div class="table" id="equivalent-table"></div>
+    </div>
+    <div class="display" id="display-equivalent">
+      <input type="number" id="eq-numerator" value="5" min="0" max="50" />
+      <div class="frac-line"></div>
+      <input type="number" id="eq-denominator" value="10" min="1" max="50" />
+    </div>
+    <div class="buttons">
+      <button class="btn" id="hide-diagram-equivalent">Hide Diagram</button>
+      <button class="btn" id="hide-number-equivalent">Hide Number</button>
+    </div>
+  </div>
+
+  <!-- Pizza Fraction (independent) -->
+  <div class="section" id="section-pizza">
+    <h2>Pizza Fraction</h2>
+    <div class="diagram" id="diagram-pizza">
+      <svg id="pizza-svg" viewBox="0 0 260 260"></svg>
+    </div>
+    <div class="display" id="display-pizza">
+      <input type="number" id="pizza-num" value="1" min="0" max="20" />
+      <div class="frac-line"></div>
+      <input type="number" id="pizza-denom" value="3" min="1" max="20" />
+    </div>
+    <div class="buttons">
+      <button class="btn" id="hide-diagram-pizza">Hide Diagram</button>
+      <button class="btn" id="hide-number-pizza">Hide Number</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* ===== Colors ===== */
+  const FRACTION_COLOR    = '#2E8B57'; // green
+  const DECIMAL_COLOR     = '#1E88E5'; // blue (number-line dot)
+  const PIZZA_FILL_COLOR  = '#d24c3d'; // pepperoni-tomato red
+  const PIZZA_EMPTY_COLOR = '#fee084'; // cheese
+  const CRUST_COLOR       = '#c47a3a';
+  const CRUST_OUTLINE     = '#8b5a2b';
+  const PEPPERONI_COLOR   = '#8a1f1f';
+
+  let linkedUpdating = false;
+
+  function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); return b ? gcd(b, a % b) : a; }
+  const xmlns  = 'http://www.w3.org/2000/svg';
+  const xlinkns = 'http://www.w3.org/1999/xlink';
+
+  /* ===== Sound system ===== */
+  const SOUND_NAMES = ['click', 'diring', 'kapai', 'sarang', 'welldone', 'You_got_it'];
+  let lastSoundTime = 0;
+  function playRandomSound() {
+    const now = performance.now();
+    if (now - lastSoundTime < 160) return;          // throttle so fast typing/drag isn't a wall of noise
+    lastSoundTime = now;
+    const name = SOUND_NAMES[Math.floor(Math.random() * SOUND_NAMES.length)];
+    const audio = new Audio('sounds/' + name + '.mp3');
+    audio.volume = 0.55;
+    audio.play().catch(() => {});                    // browsers may block until first user gesture; ignore
+  }
+
+  /* ===== Rectangle table ===== */
+  function fillTable(table, total, filled, color, cols, cellW, cellH) {
+    table.style.gridTemplateColumns = `repeat(${cols}, ${cellW}px)`;
+    const rebuilt = table.children.length !== total;
+    if (rebuilt) {
+      table.innerHTML = '';
+      for (let i = 0; i < total; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.style.width = cellW + 'px';
+        cell.style.height = cellH + 'px';
+        cell.style.backgroundColor = 'white';
+        table.appendChild(cell);
+      }
+    }
+    const cells = table.children;
+    const apply = () => {
+      for (let i = 0; i < cells.length; i++) {
+        const cell = cells[i];
+        cell.style.width = cellW + 'px';
+        cell.style.height = cellH + 'px';
+        cell.style.transitionDelay = (i * 0.05) + 's';
+        cell.style.backgroundColor = (i < filled) ? color : 'white';
+      }
+    };
+    if (rebuilt) requestAnimationFrame(() => requestAnimationFrame(apply));
+    else apply();
+  }
+
+  /* ===== Number line + draggable pika ===== */
+  const NL = { x0: 30, x1: 970, y: 70 };
+
+  function buildNumberLine() {
+    const svg = document.getElementById('number-line-svg');
+    svg.innerHTML = '';
+    const { x0, x1, y } = NL;
+
+    // Main line
+    const line = document.createElementNS(xmlns, 'line');
+    line.setAttribute('x1', x0); line.setAttribute('y1', y);
+    line.setAttribute('x2', x1); line.setAttribute('y2', y);
+    line.setAttribute('stroke', '#1a1a1a'); line.setAttribute('stroke-width', '3');
+    svg.appendChild(line);
+
+    // End caps
+    for (const x of [x0, x1]) {
+      const cap = document.createElementNS(xmlns, 'line');
+      cap.setAttribute('x1', x); cap.setAttribute('y1', y - 14);
+      cap.setAttribute('x2', x); cap.setAttribute('y2', y + 14);
+      cap.setAttribute('stroke', '#1a1a1a'); cap.setAttribute('stroke-width', '3');
+      svg.appendChild(cap);
+    }
+
+    // Ticks + labels
+    for (let i = 0; i <= 10; i++) {
+      const x = x0 + (i / 10) * (x1 - x0);
+      const major = i % 2 === 0;
+      const tick = document.createElementNS(xmlns, 'line');
+      tick.setAttribute('x1', x); tick.setAttribute('y1', major ? y - 10 : y - 7);
+      tick.setAttribute('x2', x); tick.setAttribute('y2', major ? y + 10 : y + 7);
+      tick.setAttribute('stroke', '#1a1a1a');
+      tick.setAttribute('stroke-width', major ? '2.5' : '2');
+      svg.appendChild(tick);
+
+      if (major) {
+        const label = document.createElementNS(xmlns, 'text');
+        label.setAttribute('x', x); label.setAttribute('y', y + 50);
+        label.setAttribute('text-anchor', 'middle');
+        label.setAttribute('font-size', '20');
+        label.setAttribute('font-family', 'Helvetica Neue, Arial, sans-serif');
+        label.setAttribute('font-weight', (i === 0 || i === 10) ? '700' : '500');
+        label.setAttribute('fill', (i === 0 || i === 10) ? '#1a1a1a' : '#777');
+        label.textContent = (i / 10).toString();
+        svg.appendChild(label);
+      }
+    }
+
+    // Pika handle (draggable image marker)
+    const pikaSize = 58;
+    const pikaG = document.createElementNS(xmlns, 'g');
+    pikaG.setAttribute('class', 'value-dot pika-handle');
+    pikaG.style.transition = 'transform 0.45s cubic-bezier(0.65, 0, 0.35, 1)';
+
+    const pikaImg = document.createElementNS(xmlns, 'image');
+    pikaImg.setAttribute('href', 'pika.webp');
+    pikaImg.setAttributeNS(xlinkns, 'xlink:href', 'pika.webp');
+    pikaImg.setAttribute('x', -pikaSize / 2);
+    pikaImg.setAttribute('y', -pikaSize / 2 - 2);     // slight lift so feet are near the line
+    pikaImg.setAttribute('width',  pikaSize);
+    pikaImg.setAttribute('height', pikaSize);
+    pikaImg.style.pointerEvents = 'none';             // events fire on parent <g>
+    pikaG.appendChild(pikaImg);
+
+    pikaG.setAttribute('transform', `translate(${x0 + 0.5 * (x1 - x0)}, ${y})`);
+    svg.appendChild(pikaG);
+
+    setupPikaDrag(pikaG, svg);
+  }
+
+  function updateNumberLine(value) {
+    const svg = document.getElementById('number-line-svg');
+    const pikaG = svg.querySelector('.value-dot');
+    if (!pikaG) return;
+    const { x0, x1, y } = NL;
+    pikaG.setAttribute('transform', `translate(${x0 + value * (x1 - x0)}, ${y})`);
+  }
+
+  function setupPikaDrag(pikaG, svg) {
+    let dragging = false;
+    let lastDragSound = 0;
+
+    function applyValue(clientX) {
+      const rect = svg.getBoundingClientRect();
+      const localX = clientX - rect.left;
+      // SVG viewBox is 0..1000 wide; map screen → svg coords
+      const svgX = (localX / rect.width) * 1000;
+      const t = (svgX - NL.x0) / (NL.x1 - NL.x0);
+      const value = Math.max(0, Math.min(1, t));
+
+      const decEl = document.getElementById('decimal');
+      let s = value.toFixed(2).replace(/\.?0+$/, '');
+      decEl.value = s === '' ? '0' : s;
+
+      // Throttle sound a bit more during continuous drag
+      const now = performance.now();
+      if (now - lastDragSound > 200) {
+        lastDragSound = now;
+        playRandomSound();
+      }
+      updateLinked('decimal');
+    }
+
+    function start(e) {
+      dragging = true;
+      pikaG.classList.add('dragging');
+      const cx = e.touches ? e.touches[0].clientX : e.clientX;
+      applyValue(cx);
+      e.preventDefault();
+    }
+    function move(e) {
+      if (!dragging) return;
+      const cx = e.touches ? e.touches[0].clientX : e.clientX;
+      applyValue(cx);
+      e.preventDefault();
+    }
+    function end() {
+      if (!dragging) return;
+      dragging = false;
+      pikaG.classList.remove('dragging');
+    }
+
+    pikaG.addEventListener('mousedown',  start);
+    pikaG.addEventListener('touchstart', start, { passive: false });
+    document.addEventListener('mousemove',  move);
+    document.addEventListener('touchmove',  move, { passive: false });
+    document.addEventListener('mouseup',   end);
+    document.addEventListener('touchend',  end);
+    document.addEventListener('touchcancel', end);
+  }
+
+  /* ===== Pizza ===== */
+  function polarToCartesian(cx, cy, r, angleDeg) {
+    const rad = (angleDeg - 90) * Math.PI / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  }
+
+  // Fixed topping positions: a = angle in degrees (0 = top, clockwise), d = distance from center as fraction of rInner
+  const TOPPINGS = [
+    // Pepperoni
+    { type: 'pepperoni', a:  12, d: 0.32, r: 11 },
+    { type: 'pepperoni', a:  48, d: 0.58, r: 12 },
+    { type: 'pepperoni', a:  82, d: 0.38, r: 10 },
+    { type: 'pepperoni', a: 122, d: 0.62, r: 11 },
+    { type: 'pepperoni', a: 168, d: 0.42, r: 12 },
+    { type: 'pepperoni', a: 205, d: 0.62, r: 10 },
+    { type: 'pepperoni', a: 248, d: 0.36, r: 12 },
+    { type: 'pepperoni', a: 285, d: 0.58, r: 11 },
+    { type: 'pepperoni', a: 325, d: 0.68, r: 10 },
+    { type: 'pepperoni', a: 350, d: 0.28, r: 11 },
+    // Black olives
+    { type: 'olive', a:  28, d: 0.70 },
+    { type: 'olive', a:  68, d: 0.18 },
+    { type: 'olive', a: 102, d: 0.68 },
+    { type: 'olive', a: 150, d: 0.25 },
+    { type: 'olive', a: 195, d: 0.78 },
+    { type: 'olive', a: 232, d: 0.62 },
+    { type: 'olive', a: 270, d: 0.22 },
+    { type: 'olive', a: 308, d: 0.42 },
+    { type: 'olive', a: 340, d: 0.50 },
+    // Mushrooms
+    { type: 'mushroom', a:   0, d: 0.55 },
+    { type: 'mushroom', a:  62, d: 0.22 },
+    { type: 'mushroom', a: 142, d: 0.55 },
+    { type: 'mushroom', a: 182, d: 0.30 },
+    { type: 'mushroom', a: 222, d: 0.40 },
+    { type: 'mushroom', a: 298, d: 0.72 },
+    { type: 'mushroom', a: 332, d: 0.22 }
+  ];
+
+  function drawToppings(svg, cx, cy, rInner) {
+    TOPPINGS.forEach(t => {
+      const pos = polarToCartesian(cx, cy, t.d * rInner, t.a);
+      const x = pos.x, y = pos.y;
+
+      if (t.type === 'pepperoni') {
+        const c = document.createElementNS(xmlns, 'circle');
+        c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', t.r || 10);
+        c.setAttribute('fill', '#c64438');
+        c.setAttribute('stroke', '#7a1a1a'); c.setAttribute('stroke-width', '0.9');
+        svg.appendChild(c);
+        // Two small darker spots for texture
+        const s1 = document.createElementNS(xmlns, 'circle');
+        s1.setAttribute('cx', x - (t.r||10) * 0.3); s1.setAttribute('cy', y - (t.r||10) * 0.15);
+        s1.setAttribute('r', 1.5); s1.setAttribute('fill', '#7a1a1a');
+        svg.appendChild(s1);
+        const s2 = document.createElementNS(xmlns, 'circle');
+        s2.setAttribute('cx', x + (t.r||10) * 0.25); s2.setAttribute('cy', y + (t.r||10) * 0.25);
+        s2.setAttribute('r', 1.2); s2.setAttribute('fill', '#7a1a1a');
+        svg.appendChild(s2);
+      } else if (t.type === 'olive') {
+        const c = document.createElementNS(xmlns, 'circle');
+        c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', 4.5);
+        c.setAttribute('fill', '#1f1521');
+        svg.appendChild(c);
+        // Olive hole (ring effect)
+        const hole = document.createElementNS(xmlns, 'circle');
+        hole.setAttribute('cx', x); hole.setAttribute('cy', y); hole.setAttribute('r', 1.5);
+        hole.setAttribute('fill', '#8a6a3a');
+        svg.appendChild(hole);
+      } else if (t.type === 'mushroom') {
+        // Cap: half-rounded shape
+        const cap = document.createElementNS(xmlns, 'path');
+        const r = 7;
+        cap.setAttribute('d', `M ${x - r} ${y + 1.5} A ${r} ${r * 0.95} 0 0 1 ${x + r} ${y + 1.5} Z`);
+        cap.setAttribute('fill', '#dac8a8');
+        cap.setAttribute('stroke', '#8a6f50'); cap.setAttribute('stroke-width', '0.6');
+        svg.appendChild(cap);
+        // Stem
+        const stem = document.createElementNS(xmlns, 'rect');
+        stem.setAttribute('x', x - 2); stem.setAttribute('y', y + 1.5);
+        stem.setAttribute('width', 4); stem.setAttribute('height', 4.5);
+        stem.setAttribute('fill', '#efe3c8');
+        stem.setAttribute('stroke', '#8a6f50'); stem.setAttribute('stroke-width', '0.5');
+        svg.appendChild(stem);
+      }
+    });
+  }
+
+  function buildSliceOverlays(svg, denom, cx, cy, rInner) {
+    svg.querySelectorAll('.slice-overlay, .divider').forEach(el => el.remove());
+
+    if (denom === 1) {
+      const overlay = document.createElementNS(xmlns, 'circle');
+      overlay.setAttribute('class', 'slice-overlay');
+      overlay.setAttribute('cx', cx); overlay.setAttribute('cy', cy);
+      overlay.setAttribute('r', rInner);
+      overlay.setAttribute('fill', 'white');
+      overlay.style.opacity = '0.7';
+      overlay.style.transition = 'opacity 0.55s ease';
+      svg.appendChild(overlay);
+      return;
+    }
+
+    // Slice overlays (one per slice). Opacity 0 = revealed, 0.7 = washed out.
+    for (let i = 0; i < denom; i++) {
+      const startA = (i / denom) * 360;
+      const endA   = ((i + 1) / denom) * 360;
+      const start = polarToCartesian(cx, cy, rInner, startA);
+      const end   = polarToCartesian(cx, cy, rInner, endA);
+      const largeArc = (endA - startA) > 180 ? 1 : 0;
+      const d = `M ${cx} ${cy} L ${start.x} ${start.y} A ${rInner} ${rInner} 0 ${largeArc} 1 ${end.x} ${end.y} Z`;
+
+      const overlay = document.createElementNS(xmlns, 'path');
+      overlay.setAttribute('class', 'slice-overlay');
+      overlay.setAttribute('d', d);
+      overlay.setAttribute('fill', 'white');
+      overlay.style.opacity = '0.7';
+      overlay.style.transition = 'opacity 0.55s ease';
+      overlay.style.transitionDelay = (i * 0.09) + 's';
+      svg.appendChild(overlay);
+    }
+
+    // White divider lines from center to crust edge
+    const dividerLen = rInner + 6;
+    for (let i = 0; i < denom; i++) {
+      const a = (i / denom) * 360;
+      const end = polarToCartesian(cx, cy, dividerLen, a);
+      const divider = document.createElementNS(xmlns, 'line');
+      divider.setAttribute('class', 'divider');
+      divider.setAttribute('x1', cx); divider.setAttribute('y1', cy);
+      divider.setAttribute('x2', end.x); divider.setAttribute('y2', end.y);
+      divider.setAttribute('stroke', 'white');
+      divider.setAttribute('stroke-width', '5');
+      divider.setAttribute('stroke-linecap', 'round');
+      svg.appendChild(divider);
+    }
+  }
+
+  function drawPizza(num, denom) {
+    const svg = document.getElementById('pizza-svg');
+    const cx = 130, cy = 130, rOuter = 122, rInner = 108;
+
+    // First-time build of crust + cheese + toppings (drawn ONCE, beneath overlays)
+    if (svg.dataset.built !== 'true') {
+      svg.innerHTML = '';
+
+      // Crust ring
+      const crust = document.createElementNS(xmlns, 'circle');
+      crust.setAttribute('cx', cx); crust.setAttribute('cy', cy);
+      crust.setAttribute('r', rOuter);
+      crust.setAttribute('fill', CRUST_COLOR);
+      crust.setAttribute('stroke', CRUST_OUTLINE);
+      crust.setAttribute('stroke-width', '2.5');
+      svg.appendChild(crust);
+
+      // Cheese base
+      const cheese = document.createElementNS(xmlns, 'circle');
+      cheese.setAttribute('cx', cx); cheese.setAttribute('cy', cy);
+      cheese.setAttribute('r', rInner);
+      cheese.setAttribute('fill', PIZZA_EMPTY_COLOR);
+      svg.appendChild(cheese);
+
+      // Toppings (pepperoni / olives / mushrooms)
+      drawToppings(svg, cx, cy, rInner);
+
+      svg.dataset.built = 'true';
+      svg.dataset.denom = '0';
+    }
+
+    const denomChanged = parseInt(svg.dataset.denom || '0') !== denom;
+    if (denomChanged) {
+      buildSliceOverlays(svg, denom, cx, cy, rInner);
+      svg.dataset.denom = String(denom);
+    }
+
+    // Reveal first `num` slices by fading out their white overlay
+    const applyFills = () => {
+      const overlays = svg.querySelectorAll('.slice-overlay');
+      overlays.forEach((overlay, i) => {
+        overlay.style.transitionDelay = (i * 0.09) + 's';
+        overlay.style.opacity = (i < num) ? '0' : '0.7';
+      });
+    };
+    if (denomChanged) requestAnimationFrame(() => requestAnimationFrame(applyFills));
+    else applyFills();
+  }
+
+  /* ===== Linked updater (Fraction + Equivalent + Decimal + Pizza — all four sync) ===== */
+  function clampInt(v, lo, hi) { return Math.min(Math.max(v, lo), hi); }
+
+  function updateLinked(source) {
+    if (linkedUpdating) return;
+    linkedUpdating = true;
+
+    const numEl    = document.getElementById('numerator');
+    const denEl    = document.getElementById('denominator');
+    const eqNumEl  = document.getElementById('eq-numerator');
+    const eqDenEl  = document.getElementById('eq-denominator');
+    const decEl    = document.getElementById('decimal');
+    const pNumEl   = document.getElementById('pizza-num');
+    const pDenEl   = document.getElementById('pizza-denom');
+
+    let num   = parseInt(numEl.value);
+    let den   = parseInt(denEl.value);
+    let eqNum = parseInt(eqNumEl.value);
+    let eqDen = parseInt(eqDenEl.value);
+    let dec   = parseFloat(decEl.value);
+    let pNum  = parseInt(pNumEl.value);
+    let pDen  = parseInt(pDenEl.value);
+
+    if (isNaN(num)) num = 0;
+    if (isNaN(den)   || den   < 1) den   = 1;
+    if (isNaN(eqNum)) eqNum = 0;
+    if (isNaN(eqDen) || eqDen < 1) eqDen = 1;
+    if (isNaN(dec)) dec = 0;
+    if (isNaN(pNum)) pNum = 0;
+    if (isNaN(pDen)  || pDen  < 1) pDen  = 1;
+
+    num   = clampInt(num,   0, 20);
+    den   = clampInt(den,   1, 20);
+    eqNum = clampInt(eqNum, 0, 50);
+    eqDen = clampInt(eqDen, 1, 50);
+    pNum  = clampInt(pNum,  0, 20);
+    pDen  = clampInt(pDen,  1, 20);
+    if (num   > den)   num   = den;
+    if (eqNum > eqDen) eqNum = eqDen;
+    if (pNum  > pDen)  pNum  = pDen;
+    if (dec < 0) dec = 0;
+    if (dec > 1) dec = 1;
+
+    // Derive value from whichever input the user touched
+    let value;
+    if      (source === 'fraction-num' || source === 'fraction-denom') value = num   / den;
+    else if (source === 'eq-num'       || source === 'eq-denom')       value = eqNum / eqDen;
+    else if (source === 'pizza-num'    || source === 'pizza-denom')    value = pNum  / pDen;
+    else if (source === 'decimal')                                     value = dec;
+    else                                                                value = num   / den;     // init / fallback
+
+    if (value > 1) value = 1;
+    if (value < 0) value = 0;
+
+    // Recompute every non-source numerator from the new value (denominators stay as user set them)
+    if (source !== 'fraction-num' && source !== 'fraction-denom') num   = Math.round(value * den);
+    if (source !== 'eq-num'       && source !== 'eq-denom')       eqNum = Math.round(value * eqDen);
+    if (source !== 'pizza-num'    && source !== 'pizza-denom')    pNum  = Math.round(value * pDen);
+    if (source !== 'decimal')                                     dec   = Math.round(value * 100) / 100;
+
+    if (num   > den)   num   = den;
+    if (eqNum > eqDen) eqNum = eqDen;
+    if (pNum  > pDen)  pNum  = pDen;
+
+    // Reflect computed values back into the non-source inputs
+    if (source !== 'fraction-num')   numEl.value   = num;
+    if (source !== 'fraction-denom') denEl.value   = den;
+    if (source !== 'eq-num')         eqNumEl.value = eqNum;
+    if (source !== 'eq-denom')       eqDenEl.value = eqDen;
+    if (source !== 'pizza-num')      pNumEl.value  = pNum;
+    if (source !== 'pizza-denom')    pDenEl.value  = pDen;
+    if (source !== 'decimal') {
+      let s = dec.toFixed(2).replace(/\.?0+$/, '');
+      decEl.value = s === '' ? '0' : s;
+    }
+
+    /* Visual sizing */
+    const fracCellW = den <= 3 ? 100 : (den <= 6 ? 80 : 64);
+    const fracCellH = Math.max(26, Math.min(70, Math.floor(280 / Math.max(1, den))));
+
+    let eqCols;
+    if      (eqDen <= 5)  eqCols = eqDen;
+    else if (eqDen <= 12) eqCols = Math.ceil(eqDen / 2);
+    else if (eqDen <= 25) eqCols = Math.ceil(eqDen / 3);
+    else                  eqCols = Math.ceil(eqDen / 4);
+    const eqCellSize = Math.max(20, Math.min(54, Math.floor(280 / eqCols)));
+
+    fillTable(document.getElementById('fraction-table'),   den,   num,   FRACTION_COLOR, 1,      fracCellW, fracCellH);
+    fillTable(document.getElementById('equivalent-table'), eqDen, eqNum, FRACTION_COLOR, eqCols, eqCellSize, eqCellSize);
+    updateNumberLine(value);
+    drawPizza(pNum, pDen);
+
+    linkedUpdating = false;
+  }
+
+  /* ===== Hide toggle ===== */
+  function setupToggle(btnId, target, cls, label) {
+    const btn = document.getElementById(btnId);
+    btn.addEventListener('click', () => {
+      target.classList.toggle(cls);
+      btn.classList.toggle('active');
+      const isHidden = target.classList.contains(cls);
+      btn.textContent = (isHidden ? 'Show ' : 'Hide ') + label;
+    });
+  }
+
+  /* ===== Wire-up ===== */
+  function wireInput(id, source) {
+    document.getElementById(id).addEventListener('input', () => {
+      playRandomSound();
+      updateLinked(source);
+    });
+  }
+  wireInput('numerator',      'fraction-num');
+  wireInput('denominator',    'fraction-denom');
+  wireInput('eq-numerator',   'eq-num');
+  wireInput('eq-denominator', 'eq-denom');
+  wireInput('decimal',        'decimal');
+  wireInput('pizza-num',      'pizza-num');
+  wireInput('pizza-denom',    'pizza-denom');
+
+  setupToggle('hide-diagram-decimal',    document.getElementById('number-line-wrap'),  'hidden', 'Diagram');
+  setupToggle('hide-number-decimal',     document.getElementById('display-decimal'),    'hidden', 'Number');
+  setupToggle('hide-diagram-fraction',   document.getElementById('diagram-fraction'),   'hidden', 'Diagram');
+  setupToggle('hide-number-fraction',    document.getElementById('display-fraction'),   'hidden', 'Number');
+  setupToggle('hide-diagram-equivalent', document.getElementById('diagram-equivalent'), 'hidden', 'Diagram');
+  setupToggle('hide-number-equivalent',  document.getElementById('display-equivalent'), 'hidden', 'Number');
+  setupToggle('hide-diagram-pizza',      document.getElementById('diagram-pizza'),      'hidden', 'Diagram');
+  setupToggle('hide-number-pizza',       document.getElementById('display-pizza'),      'hidden', 'Number');
+
+  /* ===== Area toggle pills (top-left of header) =====
+     Pressed (active) = section visible (default).
+     Click to hide; click again to show. */
+  const AREA_TARGETS = {
+    'decimal':    '.decimal-section',
+    'fraction':   '#section-fraction',
+    'equivalent': '#section-equivalent',
+    'pizza':      '#section-pizza',
+  };
+  document.querySelectorAll('.area-tog').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.classList.toggle('active');
+      const el = document.querySelector(AREA_TARGETS[btn.dataset.area]);
+      if (!el) return;
+      el.style.display = btn.classList.contains('active') ? '' : 'none';
+    });
+  });
+
+  /* ===== Initial render ===== */
+  buildNumberLine();
+  updateLinked('init');
+</script>
+</body>
+</html>

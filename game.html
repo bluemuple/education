@@ -199,6 +199,7 @@
 <script src="js/questions.js"></script>
 <script src="js/ef1-questions.js"></script>
 <script src="js/ef2-questions.js"></script>
+<script src="js/ef3-questions.js"></script>
 <script>
 // Inject shape fills
 const styleEl = document.createElement('style'); styleEl.textContent = window.SHAPE_CSS; document.head.appendChild(styleEl);
@@ -230,7 +231,7 @@ let state = {
 let tickHandle = null;
 
 // Subject-aware question source. Filled in after we know the game slot.
-let SUBJECT = null;          // '2dshapes' | 'ef1' | 'ef2'
+let SUBJECT = null;          // '2dshapes' | 'ef1' | 'ef2' | 'ef3'
 let QUESTION_BANK = null;    // array of questions
 let BY_LEVEL = null;         // { 1:[…], 2:[…], … }
 let LEVEL_POINTS = null;     // { 1:2, 2:4, … }
@@ -238,6 +239,7 @@ let MAX_LEVEL = 5;
 
 function inferSubject(gameSlot) {
   if (SUBJECT_HINT) return SUBJECT_HINT;
+  if (gameSlot && gameSlot.endsWith('_ef3')) return 'ef3';
   if (gameSlot && gameSlot.endsWith('_ef2')) return 'ef2';
   if (gameSlot && gameSlot.endsWith('_ef1')) return 'ef1';
   return '2dshapes';
@@ -254,6 +256,11 @@ function configureSubject(subject) {
     BY_LEVEL      = window.EF2_GAME_BY_LEVEL;
     LEVEL_POINTS  = window.EF2_GAME_LEVEL_POINTS;
     MAX_LEVEL     = window.EF2_GAME_MAX_LEVEL;
+  } else if (subject === 'ef3') {
+    QUESTION_BANK = window.EF3_GAME_QUESTIONS;
+    BY_LEVEL      = window.EF3_GAME_BY_LEVEL;
+    LEVEL_POINTS  = window.EF3_GAME_LEVEL_POINTS;
+    MAX_LEVEL     = window.EF3_GAME_MAX_LEVEL;
   } else {
     QUESTION_BANK = window.QUESTIONS;
     BY_LEVEL      = window.QUESTIONS_BY_LEVEL;
@@ -431,7 +438,8 @@ function submitAnswer() {
     if (state.selected === null || state.selected === undefined) return;
     correct = (state.selected === q.answer);
   } else {
-    if (SUBJECT === 'ef2' && window.EF2_checkSA) correct = window.EF2_checkSA(q, state.selected);
+    if (SUBJECT === 'ef3' && window.EF3_checkSA) correct = window.EF3_checkSA(q, state.selected);
+    else if (SUBJECT === 'ef2' && window.EF2_checkSA) correct = window.EF2_checkSA(q, state.selected);
     else if (SUBJECT === 'ef1' && window.EF1_checkSA) correct = window.EF1_checkSA(q, state.selected);
     else correct = window.checkSA(q, state.selected);
   }
@@ -490,8 +498,8 @@ async function finish() {
   const writes = [DB.recordScore(STUDENT_ID, GAME_ID, state.score, state.correctCount, state.wrongCount)];
   // Mark completion using the actual slot value so subject-specific kinds
   // ('game1_ef1', 'game2_ef1') are stored too.
-  if (game.slot === 'game1' || game.slot === 'game1_ef1' || game.slot === 'game1_ef2') writes.push(DB.markCompleted(STUDENT_ID, game.slot));
-  if (game.slot === 'game2' || game.slot === 'game2_ef1' || game.slot === 'game2_ef2') writes.push(DB.markCompleted(STUDENT_ID, game.slot));
+  if (game.slot === 'game1' || game.slot === 'game1_ef1' || game.slot === 'game1_ef2' || game.slot === 'game1_ef3') writes.push(DB.markCompleted(STUDENT_ID, game.slot));
+  if (game.slot === 'game2' || game.slot === 'game2_ef1' || game.slot === 'game2_ef2' || game.slot === 'game2_ef3') writes.push(DB.markCompleted(STUDENT_ID, game.slot));
   try { await Promise.allSettled(writes); } catch(e) { console.warn('finish writes failed:', e); }
 
   // ── 2) Now swap to the end screen with the score we know
@@ -521,7 +529,7 @@ async function finish() {
   } catch(e){}
 
   // Class ranking for Game 2 / custom
-  if (game.slot === 'game2' || game.slot === 'game2_ef1' || game.slot === 'game2_ef2' || game.slot === 'custom') {
+  if (game.slot === 'game2' || game.slot === 'game2_ef1' || game.slot === 'game2_ef2' || game.slot === 'game2_ef3' || game.slot === 'custom') {
     try {
       const allScores = await DB.listScores();
       const students = await DB.listStudents();
@@ -546,11 +554,12 @@ async function finish() {
   }
 
   // Show "Continue to Game 2" button only after finishing Game 1
-  if (game.slot === 'game1' || game.slot === 'game1_ef1' || game.slot === 'game1_ef2') {
+  if (game.slot === 'game1' || game.slot === 'game1_ef1' || game.slot === 'game1_ef2' || game.slot === 'game1_ef3') {
     try {
       const games = await DB.listGames();
       // Find the matching Game 2 for the same subject
       const targetSlot =
+        (game.slot === 'game1_ef3') ? 'game2_ef3' :
         (game.slot === 'game1_ef2') ? 'game2_ef2' :
         (game.slot === 'game1_ef1') ? 'game2_ef1' :
         'game2';
@@ -561,6 +570,7 @@ async function finish() {
           const q = new URLSearchParams({ student: STUDENT_ID, game: g2.id });
           if (SUBJECT === 'ef1') q.set('subject', 'ef1');
           else if (SUBJECT === 'ef2') q.set('subject', 'ef2');
+          else if (SUBJECT === 'ef3') q.set('subject', 'ef3');
           location.href = 'game.html?' + q.toString();
         };
       }
@@ -580,18 +590,21 @@ async function renderEndAvatar() {
   let unlocked = false;
   try {
     if (DB.hasCompleted) {
-      const [p1, p2, p3, g1a, g1b, g1c, g2a, g2b, g2c] = await Promise.all([
+      const [p1, p2, p3, p4, g1a, g1b, g1c, g1d, g2a, g2b, g2c, g2d] = await Promise.all([
         DB.hasCompleted(STUDENT_ID, 'practice'),
         DB.hasCompleted(STUDENT_ID, 'practice_ef1'),
         DB.hasCompleted(STUDENT_ID, 'practice_ef2'),
+        DB.hasCompleted(STUDENT_ID, 'practice_ef3'),
         DB.hasCompleted(STUDENT_ID, 'game1'),
         DB.hasCompleted(STUDENT_ID, 'game1_ef1'),
         DB.hasCompleted(STUDENT_ID, 'game1_ef2'),
+        DB.hasCompleted(STUDENT_ID, 'game1_ef3'),
         DB.hasCompleted(STUDENT_ID, 'game2'),
         DB.hasCompleted(STUDENT_ID, 'game2_ef1'),
         DB.hasCompleted(STUDENT_ID, 'game2_ef2'),
+        DB.hasCompleted(STUDENT_ID, 'game2_ef3'),
       ]);
-      unlocked = (p1 || p2 || p3) && (g1a || g1b || g1c) && (g2a || g2b || g2c);
+      unlocked = (p1 || p2 || p3 || p4) && (g1a || g1b || g1c || g1d) && (g2a || g2b || g2c || g2d);
     }
   } catch(e){}
 
