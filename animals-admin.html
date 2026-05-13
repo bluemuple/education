@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Teacher Admin · Animal Friends</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F5F4FB;
+    --card: #FFFFFF;
+    --text: #3D3548;
+    --muted: #8A8597;
+    --primary: #7C7BD9;
+    --primary-dark: #5F5EC2;
+    --accent: #FFB677;
+    --danger: #E97777;
+    --success: #67C28E;
+    --border: #ECE9F4;
+    --shadow: 0 6px 18px rgba(80, 70, 130, 0.10);
+    --shadow-lg: 0 18px 38px rgba(80, 70, 130, 0.18);
+  }
+
+  body {
+    font-family: 'Quicksand', 'Fredoka', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px 20px 60px;
+  }
+
+  .container { max-width: 1100px; margin: 0 auto; }
+
+  header.topbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+  header.topbar h1 {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--primary-dark);
+  }
+  header.topbar .sub {
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+  .actions { margin-left: auto; display: flex; gap: 10px; flex-wrap: wrap; }
+
+  .btn {
+    border: 0;
+    background: var(--primary);
+    color: white;
+    font-family: inherit;
+    font-weight: 600;
+    padding: 10px 18px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 0.92rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .btn:hover { background: var(--primary-dark); }
+  .btn:active { transform: translateY(1px); }
+  .btn.ghost {
+    background: white;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn.ghost:hover { background: var(--bg); }
+  .btn.danger { background: var(--danger); }
+  .btn.danger:hover { background: #d96565; }
+  .btn.success { background: var(--success); }
+  .btn.success:hover { background: #56b07c; }
+
+  .search-row {
+    background: white;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 22px;
+    box-shadow: var(--shadow);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .search-row input {
+    flex: 1;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-family: inherit;
+    font-size: 0.95rem;
+    outline: none;
+  }
+  .search-row input:focus { border-color: var(--primary); }
+  .search-row select {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-family: inherit;
+    font-size: 0.95rem;
+    background: white;
+  }
+
+  .category-section {
+    background: white;
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 18px;
+    box-shadow: var(--shadow);
+  }
+  .category-section h2 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .cat-pill {
+    margin-left: auto;
+    background: var(--bg);
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+  .animal-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 10px;
+  }
+  .animal-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: white;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, transform 0.1s;
+    text-align: left;
+    font-family: inherit;
+    color: inherit;
+    font-size: 0.95rem;
+    position: relative;
+  }
+  .animal-item:hover {
+    background: var(--bg);
+    border-color: var(--primary);
+  }
+  .animal-item .em { font-size: 1.5rem; }
+  .animal-item .nm { font-weight: 600; }
+  .animal-item .edited {
+    margin-left: auto;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+  .animal-item .edited.hidden { display: none; }
+
+  /* Modal */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(40, 30, 70, 0.55);
+    backdrop-filter: blur(3px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+  }
+  .modal-backdrop.open { display: flex; }
+
+  .modal {
+    background: white;
+    border-radius: 18px;
+    max-width: 720px;
+    width: 100%;
+    max-height: 92vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+    animation: pop 0.18s ease;
+  }
+  @keyframes pop {
+    from { transform: scale(0.96); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+  }
+  .modal-head {
+    padding: 22px 26px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .modal-head .em { font-size: 2.4rem; }
+  .modal-head .title {
+    font-family: 'Fredoka', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+  }
+  .modal-head .meta { color: var(--muted); font-size: 0.85rem; }
+  .modal-head .close {
+    margin-left: auto;
+    background: var(--bg);
+    border: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: var(--muted);
+  }
+  .modal-head .close:hover { background: #e6e3ef; color: var(--text); }
+
+  .modal-body { padding: 22px 26px; }
+  .field { margin-bottom: 18px; }
+  .field label {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 6px;
+    font-size: 0.92rem;
+    color: var(--text);
+  }
+  .field .hint {
+    color: var(--muted);
+    font-size: 0.82rem;
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  .field input[type=text],
+  .field textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-family: inherit;
+    font-size: 0.95rem;
+    outline: none;
+    background: white;
+    color: var(--text);
+    resize: vertical;
+  }
+  .field input[type=text]:focus,
+  .field textarea:focus { border-color: var(--primary); }
+  .field textarea { min-height: 70px; }
+
+  .facts-editor .fact-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .facts-editor .fact-row input { flex: 1; }
+  .icon-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: white;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+  .icon-btn:hover { background: var(--bg); color: var(--danger); border-color: var(--danger); }
+  .add-fact-btn {
+    background: var(--bg);
+    border: 1px dashed var(--primary);
+    color: var(--primary);
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 0.88rem;
+  }
+  .add-fact-btn:hover { background: #ECEAFD; }
+
+  /* photo editor */
+  .photo-row {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .photo-preview {
+    width: 140px;
+    height: 140px;
+    border-radius: 14px;
+    background: var(--bg);
+    border: 2px dashed var(--border);
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.8rem;
+    padding: 8px;
+  }
+  .photo-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: none;
+  }
+  .photo-preview.has-image { border-style: solid; padding: 0; }
+  .photo-preview.has-image img { display: block; }
+  .photo-preview.has-image .placeholder { display: none; }
+  .photo-preview .source-badge {
+    position: absolute;
+    bottom: 6px;
+    left: 6px;
+    background: rgba(0,0,0,0.65);
+    color: white;
+    font-size: 0.68rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    display: none;
+  }
+  .photo-preview.has-image .source-badge { display: inline-block; }
+  .photo-actions {
+    flex: 1;
+    min-width: 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .photo-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .paste-hint {
+    background: #FFF4D6;
+    border: 2px dashed var(--accent);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: #7a5a14;
+    font-weight: 600;
+    font-size: 0.88rem;
+    display: none;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  .paste-hint.shown { display: block; }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.015); }
+  }
+
+  .yt-preview {
+    margin-top: 10px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #000;
+    position: relative;
+    padding-bottom: 56.25%;
+    display: none;
+  }
+  .yt-preview.shown { display: block; }
+  .yt-preview iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+  .yt-status {
+    margin-top: 6px;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .yt-status.ok { color: var(--success); }
+  .yt-status.bad { color: var(--danger); }
+
+  .modal-foot {
+    padding: 18px 26px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+    background: var(--bg);
+    border-radius: 0 0 18px 18px;
+    flex-wrap: wrap;
+  }
+  .modal-foot .spacer { flex: 1; }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--text);
+    color: white;
+    padding: 12px 22px;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.92rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 200;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <header class="topbar">
+      <div>
+        <h1>🛠️ Teacher Admin</h1>
+        <div class="sub">Click any animal to edit its info or add a YouTube video.</div>
+      </div>
+      <div class="actions">
+        <a class="btn ghost" href="animals.html">👁 View site</a>
+        <button id="exportBtn" class="btn ghost">⬇ Export</button>
+        <button id="importBtn" class="btn ghost">⬆ Import</button>
+        <input id="importFile" type="file" accept="application/json" hidden>
+        <button id="resetAllBtn" class="btn danger">↺ Reset all</button>
+      </div>
+    </header>
+
+    <div class="search-row">
+      <input id="searchInput" type="text" placeholder="Search animals by name..." />
+      <select id="filterEdited">
+        <option value="all">All animals</option>
+        <option value="edited">Edited only</option>
+        <option value="unedited">Unedited only</option>
+      </select>
+    </div>
+
+    <main id="listRoot"></main>
+  </div>
+
+  <!-- Edit modal -->
+  <div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true">
+    <div class="modal" role="document">
+      <div class="modal-head">
+        <div class="em" id="mEmoji">🐾</div>
+        <div>
+          <div class="title" id="mTitle">—</div>
+          <div class="meta" id="mMeta">—</div>
+        </div>
+        <button class="close" id="closeModal" aria-label="Close">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="field">
+          <label>Photo</label>
+          <div class="hint">By default the Wikipedia photo is shown. Click <b>📋 Paste Image</b> and then press <b>Cmd+V</b> (or Ctrl+V) to insert a copied image. You can also pick a file.</div>
+          <div class="photo-row">
+            <div class="photo-preview" id="photoPreview">
+              <img id="photoImg" alt="">
+              <div class="placeholder">No photo selected</div>
+              <span class="source-badge" id="photoSourceBadge">Wikipedia</span>
+            </div>
+            <div class="photo-actions">
+              <div class="photo-buttons">
+                <button type="button" class="btn ghost" id="pasteImageBtn">📋 Paste Image</button>
+                <button type="button" class="btn ghost" id="pickImageBtn">📁 Choose file</button>
+                <input id="pickImageFile" type="file" accept="image/*" hidden>
+                <button type="button" class="btn ghost" id="clearImageBtn">🗑 Use default</button>
+              </div>
+              <div class="paste-hint" id="pasteHint">📋 Now press <b>Cmd+V</b> (or Ctrl+V) to paste your copied image…</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="fHabitat">Habitat</label>
+          <textarea id="fHabitat" placeholder="Where does this animal live?"></textarea>
+        </div>
+
+        <div class="field">
+          <label for="fDiet">Diet</label>
+          <textarea id="fDiet" placeholder="What does it eat?"></textarea>
+        </div>
+
+        <div class="field facts-editor">
+          <label>Fun Facts <span class="hint" style="font-weight:500;">(3–7 recommended)</span></label>
+          <div id="factsRows"></div>
+          <button type="button" class="add-fact-btn" id="addFactBtn">＋ Add fact</button>
+        </div>
+
+        <div class="field">
+          <label for="fYoutube">YouTube video</label>
+          <div class="hint">Paste a full YouTube URL (e.g. https://youtu.be/abc123). Leave empty to hide the video section for students.</div>
+          <input id="fYoutube" type="text" placeholder="https://www.youtube.com/watch?v=..." />
+          <div class="yt-status" id="ytStatus"></div>
+          <div class="yt-preview" id="ytPreview"><iframe id="ytIframe" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn ghost" id="resetOneBtn" title="Restore default values">↺ Reset this animal</button>
+        <div class="spacer"></div>
+        <button class="btn ghost" id="cancelBtn">Cancel</button>
+        <button class="btn success" id="saveBtn">💾 Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script src="animals-data.js"></script>
+<script>
+(() => {
+  const listRoot       = document.getElementById('listRoot');
+  const searchInput    = document.getElementById('searchInput');
+  const filterEdited   = document.getElementById('filterEdited');
+  const modalBackdrop  = document.getElementById('modalBackdrop');
+  const closeModal     = document.getElementById('closeModal');
+  const cancelBtn      = document.getElementById('cancelBtn');
+  const saveBtn        = document.getElementById('saveBtn');
+  const resetOneBtn    = document.getElementById('resetOneBtn');
+  const resetAllBtn    = document.getElementById('resetAllBtn');
+  const exportBtn      = document.getElementById('exportBtn');
+  const importBtn      = document.getElementById('importBtn');
+  const importFile     = document.getElementById('importFile');
+
+  const mEmoji  = document.getElementById('mEmoji');
+  const mTitle  = document.getElementById('mTitle');
+  const mMeta   = document.getElementById('mMeta');
+  const fHabitat = document.getElementById('fHabitat');
+  const fDiet    = document.getElementById('fDiet');
+  const factsRows= document.getElementById('factsRows');
+  const addFactBtn = document.getElementById('addFactBtn');
+  const fYoutube = document.getElementById('fYoutube');
+  const ytStatus = document.getElementById('ytStatus');
+  const ytPreview= document.getElementById('ytPreview');
+  const ytIframe = document.getElementById('ytIframe');
+  const toastEl  = document.getElementById('toast');
+
+  // photo refs
+  const photoPreview  = document.getElementById('photoPreview');
+  const photoImg      = document.getElementById('photoImg');
+  const photoSourceBadge = document.getElementById('photoSourceBadge');
+  const pasteImageBtn = document.getElementById('pasteImageBtn');
+  const pickImageBtn  = document.getElementById('pickImageBtn');
+  const pickImageFile = document.getElementById('pickImageFile');
+  const clearImageBtn = document.getElementById('clearImageBtn');
+  const pasteHint     = document.getElementById('pasteHint');
+
+  let activeId = null;
+  // The data URL of a custom image being edited in the modal. null = use default.
+  let pendingCustomImage = null;
+  let waitingForPaste = false;
+
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => toastEl.classList.remove('show'), 1800);
+  }
+
+  function escapeHTML(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  }
+
+  function renderList() {
+    const overrides = loadOverrides();
+    const q = searchInput.value.trim().toLowerCase();
+    const filter = filterEdited.value;
+    listRoot.innerHTML = "";
+    let any = false;
+
+    ANIMAL_CATEGORIES.forEach(cat => {
+      const items = ANIMALS
+        .filter(a => a.category === cat.id)
+        .filter(a => !q || a.name.toLowerCase().includes(q))
+        .filter(a => {
+          const edited = !!overrides[a.id];
+          if (filter === 'edited') return edited;
+          if (filter === 'unedited') return !edited;
+          return true;
+        });
+
+      if (items.length === 0) return;
+      any = true;
+
+      const section = document.createElement('section');
+      section.className = 'category-section';
+      section.innerHTML = `
+        <h2>${cat.emoji} ${escapeHTML(cat.name)}<span class="cat-pill">${items.length}</span></h2>
+        <div class="animal-list"></div>
+      `;
+      const list = section.querySelector('.animal-list');
+      items.forEach(a => {
+        const btn = document.createElement('button');
+        btn.className = 'animal-item';
+        btn.type = 'button';
+        const isEdited = !!overrides[a.id];
+        btn.innerHTML = `
+          <span class="em">${a.emoji}</span>
+          <span class="nm">${escapeHTML(a.name)}</span>
+          <span class="edited ${isEdited ? '' : 'hidden'}" title="Edited"></span>
+        `;
+        btn.addEventListener('click', () => openEditor(a.id));
+        list.appendChild(btn);
+      });
+      listRoot.appendChild(section);
+    });
+
+    if (!any) {
+      listRoot.innerHTML = `<div style="background:white;border-radius:12px;padding:30px;text-align:center;color:var(--muted)">No animals match the current filter.</div>`;
+    }
+  }
+
+  // ---- modal ----
+
+  function makeFactRow(value = "") {
+    const row = document.createElement('div');
+    row.className = 'fact-row';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = value;
+    input.placeholder = 'Did you know...';
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'icon-btn';
+    del.innerHTML = '🗑';
+    del.title = 'Remove fact';
+    del.addEventListener('click', () => row.remove());
+    row.appendChild(input);
+    row.appendChild(del);
+    return row;
+  }
+
+  function openEditor(id) {
+    const animal = getMergedAnimal(id);
+    if (!animal) return;
+    activeId = id;
+
+    mEmoji.textContent = animal.emoji;
+    mTitle.textContent = animal.name;
+    const cat = getCategoryById(animal.category);
+    mMeta.textContent = cat ? `${cat.emoji} ${cat.name}` : '';
+
+    fHabitat.value = animal.habitat || '';
+    fDiet.value    = animal.diet || '';
+
+    factsRows.innerHTML = '';
+    const facts = Array.isArray(animal.funFacts) ? animal.funFacts : [];
+    if (facts.length === 0) {
+      factsRows.appendChild(makeFactRow(""));
+    } else {
+      facts.forEach(f => factsRows.appendChild(makeFactRow(f)));
+    }
+
+    fYoutube.value = animal.youtubeId || animal.youtubeUrl || '';
+    updateYTPreview();
+
+    // ----- photo -----
+    const overrides = loadOverrides();
+    pendingCustomImage = (overrides[id] && overrides[id].image) || null;
+    if (pendingCustomImage) {
+      setPhotoPreview(pendingCustomImage, 'Custom');
+    } else {
+      // Show Wikipedia photo as a preview (default).
+      setPhotoPreview(null, 'Wikipedia');
+      fetchWikipediaImage(id).then(src => {
+        if (activeId !== id) return; // user switched
+        if (pendingCustomImage) return; // user pasted in the meantime
+        if (src) setPhotoPreview(upscaleWikiThumb(src, 480), 'Wikipedia');
+      });
+    }
+    hidePasteHint();
+
+    modalBackdrop.classList.add('open');
+    setTimeout(() => fHabitat.focus(), 50);
+  }
+
+  function closeEditor() {
+    modalBackdrop.classList.remove('open');
+    activeId = null;
+    pendingCustomImage = null;
+    hidePasteHint();
+    ytIframe.src = "";
+  }
+
+  function setPhotoPreview(src, sourceLabel) {
+    if (src) {
+      photoImg.src = src;
+      photoPreview.classList.add('has-image');
+      photoSourceBadge.textContent = sourceLabel || '';
+    } else {
+      photoImg.removeAttribute('src');
+      photoPreview.classList.remove('has-image');
+    }
+  }
+
+  function showPasteHint() {
+    pasteHint.classList.add('shown');
+    waitingForPaste = true;
+  }
+  function hidePasteHint() {
+    pasteHint.classList.remove('shown');
+    waitingForPaste = false;
+  }
+
+  // Compress an image file/blob to a JPEG data URL that's safe for localStorage.
+  function compressImage(blob, maxDim = 900, quality = 0.82) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+          const w = Math.max(1, Math.round(img.width * scale));
+          const h = Math.max(1, Math.round(img.height * scale));
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = reject;
+        img.src = reader.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function applyImageFile(blob) {
+    if (!blob || !blob.type || !blob.type.startsWith('image/')) {
+      toast("That doesn't look like an image.");
+      return;
+    }
+    try {
+      const dataUrl = await compressImage(blob);
+      pendingCustomImage = dataUrl;
+      setPhotoPreview(dataUrl, 'Custom');
+      hidePasteHint();
+      toast('Photo added ✓ Click Save to keep it.');
+    } catch (e) {
+      toast("Couldn't read that image.");
+    }
+  }
+
+  // Global paste handler — only kicks in when the user pressed the Paste Image button.
+  document.addEventListener('paste', e => {
+    if (!modalBackdrop.classList.contains('open') || !waitingForPaste) return;
+    const items = (e.clipboardData && e.clipboardData.items) || [];
+    for (const item of items) {
+      if (item.type && item.type.startsWith('image/')) {
+        const blob = item.getAsFile();
+        if (blob) {
+          e.preventDefault();
+          applyImageFile(blob);
+          return;
+        }
+      }
+    }
+    toast("No image found in clipboard. Copy an image first, then try again.");
+  });
+
+  function updateYTPreview() {
+    const raw = fYoutube.value.trim();
+    if (!raw) {
+      ytStatus.textContent = "No video. Students will not see the video section.";
+      ytStatus.className = "yt-status";
+      ytPreview.classList.remove('shown');
+      ytIframe.src = "";
+      return;
+    }
+    const id = extractYouTubeId(raw);
+    if (!id) {
+      ytStatus.textContent = "⚠️ Couldn't read that link. Please paste a YouTube URL.";
+      ytStatus.className = "yt-status bad";
+      ytPreview.classList.remove('shown');
+      ytIframe.src = "";
+      return;
+    }
+    ytStatus.textContent = `✓ Looks good (video id: ${id})`;
+    ytStatus.className = "yt-status ok";
+    ytIframe.src = `https://www.youtube.com/embed/${encodeURIComponent(id)}`;
+    ytPreview.classList.add('shown');
+  }
+
+  function saveCurrent() {
+    if (!activeId) return;
+    const overrides = loadOverrides();
+    const base = ANIMALS.find(a => a.id === activeId);
+    if (!base) return;
+
+    const facts = Array.from(factsRows.querySelectorAll('input'))
+      .map(i => i.value.trim())
+      .filter(v => v.length > 0);
+
+    const ytRaw = fYoutube.value.trim();
+    const ytId  = ytRaw ? extractYouTubeId(ytRaw) : '';
+
+    const next = {
+      habitat: fHabitat.value.trim(),
+      diet:    fDiet.value.trim(),
+      funFacts: facts,
+      youtubeId: ytId,
+      image: pendingCustomImage || ""
+    };
+
+    // Only store fields that differ from defaults, so "edited" badge stays meaningful
+    const diff = {};
+    if (next.habitat !== base.habitat) diff.habitat = next.habitat;
+    if (next.diet    !== base.diet)    diff.diet    = next.diet;
+    if (JSON.stringify(next.funFacts) !== JSON.stringify(base.funFacts)) diff.funFacts = next.funFacts;
+    if (next.youtubeId) diff.youtubeId = next.youtubeId;
+    if (next.image) diff.image = next.image;
+
+    if (Object.keys(diff).length === 0) {
+      delete overrides[activeId];
+    } else {
+      overrides[activeId] = diff;
+    }
+    try {
+      saveOverrides(overrides);
+    } catch (e) {
+      alert("Couldn't save — your browser storage might be full. Try removing the photo or clearing old edits.");
+      return;
+    }
+    toast('Saved ✓');
+    closeEditor();
+    renderList();
+  }
+
+  function resetCurrent() {
+    if (!activeId) return;
+    if (!confirm("Reset this animal back to its default info? Your edits for this animal will be lost.")) return;
+    const overrides = loadOverrides();
+    delete overrides[activeId];
+    saveOverrides(overrides);
+    const id = activeId;
+    closeEditor();
+    renderList();
+    setTimeout(() => openEditor(id), 50);
+    toast('Reset to default ✓');
+  }
+
+  function resetAll() {
+    if (!confirm("Reset ALL animals to defaults? This clears every edit you've made.")) return;
+    saveOverrides({});
+    renderList();
+    toast('All edits cleared ✓');
+  }
+
+  function exportAll() {
+    const data = loadOverrides();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `animal-edits-${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast('Exported ✓');
+  }
+
+  function importAll(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const obj = JSON.parse(reader.result);
+        if (!obj || typeof obj !== 'object') throw new Error('not an object');
+        if (!confirm("Replace your current edits with the file's edits?")) return;
+        saveOverrides(obj);
+        renderList();
+        toast('Imported ✓');
+      } catch (e) {
+        alert("That file doesn't look like a valid export.");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  // ---- wire up ----
+  closeModal.addEventListener('click', closeEditor);
+  cancelBtn.addEventListener('click', closeEditor);
+  saveBtn.addEventListener('click', saveCurrent);
+  resetOneBtn.addEventListener('click', resetCurrent);
+  resetAllBtn.addEventListener('click', resetAll);
+  exportBtn.addEventListener('click', exportAll);
+  importBtn.addEventListener('click', () => importFile.click());
+  importFile.addEventListener('change', e => {
+    if (e.target.files[0]) importAll(e.target.files[0]);
+    e.target.value = '';
+  });
+
+  modalBackdrop.addEventListener('click', e => {
+    if (e.target === modalBackdrop) closeEditor();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && modalBackdrop.classList.contains('open')) closeEditor();
+  });
+
+  addFactBtn.addEventListener('click', () => {
+    factsRows.appendChild(makeFactRow(""));
+    factsRows.lastElementChild.querySelector('input').focus();
+  });
+
+  pasteImageBtn.addEventListener('click', () => {
+    showPasteHint();
+    toast('📋 Press Cmd+V (or Ctrl+V) to paste.');
+  });
+  pickImageBtn.addEventListener('click', () => pickImageFile.click());
+  pickImageFile.addEventListener('change', e => {
+    const f = e.target.files && e.target.files[0];
+    if (f) applyImageFile(f);
+    e.target.value = '';
+  });
+  clearImageBtn.addEventListener('click', async () => {
+    pendingCustomImage = null;
+    setPhotoPreview(null, 'Wikipedia');
+    hidePasteHint();
+    if (activeId) {
+      const wikiSrc = await fetchWikipediaImage(activeId);
+      if (wikiSrc && !pendingCustomImage) {
+        setPhotoPreview(upscaleWikiThumb(wikiSrc, 480), 'Wikipedia');
+      }
+    }
+    toast('Will use the default photo. Click Save.');
+  });
+
+  fYoutube.addEventListener('input', updateYTPreview);
+
+  searchInput.addEventListener('input', renderList);
+  filterEdited.addEventListener('change', renderList);
+
+  renderList();
+})();
+</script>
+</body>
+</html>
