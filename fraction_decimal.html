@@ -99,12 +99,14 @@
     transition: transform 0.3s cubic-bezier(0.34,1.4,0.64,1), opacity 0.25s ease;
     opacity: 0.55;
     cursor: pointer;
+    /* multiply lets white screenshot backgrounds blend into the white page,
+       removing the visible square frame around each pokemon */
+    mix-blend-mode: multiply;
   }
   .pokemon-marker:hover { opacity: 0.95; transform: scale(1.08); }
   .pokemon-marker.active {
     opacity: 1;
     transform: scale(1.25);
-    filter: drop-shadow(0 3px 4px rgba(0,0,0,0.28));
   }
 
   /* Fraction display */
@@ -438,15 +440,13 @@
   const xmlns  = 'http://www.w3.org/2000/svg';
   const xlinkns = 'http://www.w3.org/1999/xlink';
 
-  /* ===== Sound system ===== */
-  const SOUND_NAMES = ['click', 'diring', 'kapai', 'sarang', 'welldone', 'You_got_it'];
+  /* ===== Sound system — single click sound ===== */
   let lastSoundTime = 0;
   function playRandomSound() {
     const now = performance.now();
     if (now - lastSoundTime < 160) return;          // throttle so fast typing/drag isn't a wall of noise
     lastSoundTime = now;
-    const name = SOUND_NAMES[Math.floor(Math.random() * SOUND_NAMES.length)];
-    const audio = new Audio('sounds/' + name + '.mp3');
+    const audio = new Audio('sounds/click.mp3');
     audio.volume = 0.55;
     audio.play().catch(() => {});                    // browsers may block until first user gesture; ignore
   }
@@ -546,8 +546,8 @@
     }
 
     // Pokemon markers above each 0.1 tick. Click any pokemon to jump pika to that value.
-    const pokemonSize = 50;
-    const pokemonY = 4;
+    const pokemonSize = 10;   // 80% smaller (was 50)
+    const pokemonY = 44;      // shifted down so the tiny image still sits just above the line
     for (let i = 0; i < 10; i++) {
       const v = (i + 1) / 10;                      // 0.1, 0.2, …, 1.0
       const cx = x0 + v * (x1 - x0);
