@@ -290,57 +290,68 @@
   .add-fact-btn:hover { background: #ECEAFD; }
 
   /* photo editor */
-  .photo-row {
+  .photo-gallery {
     display: flex;
-    gap: 14px;
-    align-items: flex-start;
+    gap: 10px;
     flex-wrap: wrap;
+    margin-bottom: 12px;
   }
-  .photo-preview {
-    width: 140px;
-    height: 140px;
-    border-radius: 14px;
-    background: var(--bg);
-    border: 2px dashed var(--border);
-    overflow: hidden;
+  .photo-tile {
+    width: 110px;
+    height: 110px;
+    border-radius: 12px;
     position: relative;
+    overflow: hidden;
+    background: var(--bg);
+    border: 2px solid var(--border);
     flex-shrink: 0;
-    display: grid;
-    place-items: center;
-    text-align: center;
-    color: var(--muted);
-    font-size: 0.8rem;
-    padding: 8px;
   }
-  .photo-preview img {
+  .photo-tile img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    display: none;
+    display: block;
   }
-  .photo-preview.has-image { border-style: solid; padding: 0; }
-  .photo-preview.has-image img { display: block; }
-  .photo-preview.has-image .placeholder { display: none; }
-  .photo-preview .source-badge {
+  .photo-tile.empty {
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    font-size: 0.78rem;
+    text-align: center;
+    padding: 10px;
+    border-style: dashed;
+  }
+  .photo-tile .badge {
     position: absolute;
-    bottom: 6px;
-    left: 6px;
+    bottom: 4px;
+    left: 4px;
     background: rgba(0,0,0,0.65);
     color: white;
-    font-size: 0.68rem;
+    font-size: 0.65rem;
     padding: 2px 6px;
     border-radius: 4px;
     font-weight: 600;
-    display: none;
+    letter-spacing: 0.02em;
   }
-  .photo-preview.has-image .source-badge { display: inline-block; }
-  .photo-actions {
-    flex: 1;
-    min-width: 220px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+  .photo-tile .badge.default { background: rgba(70, 100, 190, 0.85); }
+  .photo-tile .remove-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    border: 0;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0;
   }
+  .photo-tile .remove-btn:hover { background: var(--danger); }
   .photo-buttons {
     display: flex;
     gap: 8px;
@@ -463,24 +474,15 @@
 
       <div class="modal-body">
         <div class="field">
-          <label>Photo</label>
-          <div class="hint">By default the Wikipedia photo is shown. Click <b>📋 Paste Image</b> and then press <b>Cmd+V</b> (or Ctrl+V) to insert a copied image. You can also pick a file.</div>
-          <div class="photo-row">
-            <div class="photo-preview" id="photoPreview">
-              <img id="photoImg" alt="">
-              <div class="placeholder">No photo selected</div>
-              <span class="source-badge" id="photoSourceBadge">Wikipedia</span>
-            </div>
-            <div class="photo-actions">
-              <div class="photo-buttons">
-                <button type="button" class="btn ghost" id="pasteImageBtn">📋 Paste Image</button>
-                <button type="button" class="btn ghost" id="pickImageBtn">📁 Choose file</button>
-                <input id="pickImageFile" type="file" accept="image/*" hidden>
-                <button type="button" class="btn ghost" id="clearImageBtn">🗑 Use default</button>
-              </div>
-              <div class="paste-hint" id="pasteHint">📋 Now press <b>Cmd+V</b> (or Ctrl+V) to paste your copied image…</div>
-            </div>
+          <label>Photos</label>
+          <div class="hint">The first tile is the Wikipedia default photo. Click <b>📋 Paste Image</b> and then press <b>Cmd+V</b> (or Ctrl+V) to add another photo next to it. You can also pick a file. Click <b>×</b> on a custom photo to remove it.</div>
+          <div class="photo-gallery" id="photoGallery"></div>
+          <div class="photo-buttons">
+            <button type="button" class="btn ghost" id="pasteImageBtn">📋 Paste Image</button>
+            <button type="button" class="btn ghost" id="pickImageBtn">📁 Add file</button>
+            <input id="pickImageFile" type="file" accept="image/*" hidden>
           </div>
+          <div class="paste-hint" id="pasteHint">📋 Now press <b>Cmd+V</b> (or Ctrl+V) to paste your copied image…</div>
         </div>
 
         <div class="field">
@@ -549,18 +551,17 @@
   const toastEl  = document.getElementById('toast');
 
   // photo refs
-  const photoPreview  = document.getElementById('photoPreview');
-  const photoImg      = document.getElementById('photoImg');
-  const photoSourceBadge = document.getElementById('photoSourceBadge');
+  const photoGallery  = document.getElementById('photoGallery');
   const pasteImageBtn = document.getElementById('pasteImageBtn');
   const pickImageBtn  = document.getElementById('pickImageBtn');
   const pickImageFile = document.getElementById('pickImageFile');
-  const clearImageBtn = document.getElementById('clearImageBtn');
   const pasteHint     = document.getElementById('pasteHint');
 
   let activeId = null;
-  // The data URL of a custom image being edited in the modal. null = use default.
-  let pendingCustomImage = null;
+  // Photos being edited in the modal: array of data URLs added by the teacher.
+  let pendingCustomImages = [];
+  // The cached Wikipedia URL for the currently-edited animal (default tile).
+  let pendingWikiUrl = null;
   let waitingForPaste = false;
 
   function toast(msg) {
@@ -669,20 +670,15 @@
     fYoutube.value = animal.youtubeId || animal.youtubeUrl || '';
     updateYTPreview();
 
-    // ----- photo -----
-    const overrides = loadOverrides();
-    pendingCustomImage = (overrides[id] && overrides[id].image) || null;
-    if (pendingCustomImage) {
-      setPhotoPreview(pendingCustomImage, 'Custom');
-    } else {
-      // Show Wikipedia photo as a preview (default).
-      setPhotoPreview(null, 'Wikipedia');
-      fetchWikipediaImage(id).then(src => {
-        if (activeId !== id) return; // user switched
-        if (pendingCustomImage) return; // user pasted in the meantime
-        if (src) setPhotoPreview(upscaleWikiThumb(src, 480), 'Wikipedia');
-      });
-    }
+    // ----- photos -----
+    pendingCustomImages = getCustomImages(id).slice();
+    pendingWikiUrl = null;
+    renderPhotoGallery();
+    fetchWikipediaImage(id).then(src => {
+      if (activeId !== id) return;
+      pendingWikiUrl = src || null;
+      renderPhotoGallery();
+    });
     hidePasteHint();
 
     modalBackdrop.classList.add('open');

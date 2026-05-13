@@ -1158,16 +1158,32 @@ async function fetchWikipediaImage(id) {
   }
 }
 
-// Resolves the best image for an animal:
-//   1) Admin-uploaded image (data URL) — overrides anything
-//   2) Wikipedia photo (cached or freshly fetched)
-//   3) null  → caller should show the emoji instead
+// Reads the teacher's custom photos for an animal as an array of data URLs.
+// Handles legacy single-`image` field too.
+function getCustomImages(id) {
+  const ov = loadOverrides()[id];
+  if (!ov) return [];
+  if (Array.isArray(ov.images)) return ov.images.filter(Boolean);
+  if (ov.image) return [ov.image];
+  return [];
+}
+
+// Resolves all photos for an animal in display order:
+//   [{src, source:'wikipedia'}, {src, source:'custom'}, ...]
+// Wikipedia photo (if any) comes first, then teacher-added photos.
+async function getAnimalImages(animal) {
+  if (!animal) return [];
+  const result = [];
+  const wiki = await fetchWikipediaImage(animal.id);
+  if (wiki) result.push({ src: wiki, source: "wikipedia" });
+  getCustomImages(animal.id).forEach(src => result.push({ src, source: "custom" }));
+  return result;
+}
+
+// Kept for backward compatibility — first image only.
 async function getAnimalImage(animal) {
-  if (!animal) return null;
-  const overrides = loadOverrides();
-  const own = overrides[animal.id] && overrides[animal.id].image;
-  if (own) return own;
-  return await fetchWikipediaImage(animal.id);
+  const arr = await getAnimalImages(animal);
+  return arr.length ? arr[0].src : null;
 }
 
 // Convert any YouTube URL to a video ID.

@@ -133,6 +133,39 @@
   .hero-photo.shown { display: block; }
   .hero-photo.shown ~ .hero-emoji-fallback { display: none; }
 
+  .thumb-strip {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 16px;
+    position: relative;
+    z-index: 1;
+  }
+  .thumb-strip .thumb {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 3px solid transparent;
+    cursor: pointer;
+    background: white;
+    padding: 0;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+    transition: transform 0.15s, border-color 0.15s;
+  }
+  .thumb-strip .thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .thumb-strip .thumb:hover { transform: translateY(-3px); }
+  .thumb-strip .thumb.active {
+    border-color: var(--primary);
+    transform: translateY(-3px);
+  }
+
   .hero-name {
     font-size: clamp(2rem, 5vw, 3rem);
     font-weight: 700;
@@ -319,6 +352,7 @@
       <div class="hero-card">
         <div class="hero-photo" id="heroPhoto"><img id="heroPhotoImg" alt="${escapeHTML(animal.name)}"></div>
         <div class="hero-emoji hero-emoji-fallback">${animal.emoji}</div>
+        <div class="thumb-strip" id="thumbStrip"></div>
         <h1 class="hero-name">${escapeHTML(animal.name)}</h1>
         <div class="hero-category">${cat ? cat.emoji : ''} ${escapeHTML(cat ? cat.name : '')}</div>
       </div>
@@ -361,17 +395,38 @@
       </div>` : ''}
     `;
 
-    // Try to load a photo: admin override first, then Wikipedia.
-    const heroPhoto = document.getElementById('heroPhoto');
+    // Load every photo (Wikipedia + teacher-added) and build a gallery.
+    const heroPhoto    = document.getElementById('heroPhoto');
     const heroPhotoImg = document.getElementById('heroPhotoImg');
-    getAnimalImage(animal).then(src => {
-      if (!src) return;
-      // Bigger version for the hero (Wikipedia thumbnails default to 320px wide).
-      const display = upscaleWikiThumb(src, 640);
+    const thumbStrip   = document.getElementById('thumbStrip');
+
+    function setMainPhoto(src) {
       heroPhotoImg.onload = () => heroPhoto.classList.add('shown');
-      heroPhotoImg.onerror = () => { /* keep emoji visible */ };
-      heroPhotoImg.src = display;
-    }).catch(() => { /* keep emoji */ });
+      heroPhotoImg.onerror = () => {};
+      heroPhotoImg.src = src;
+    }
+
+    getAnimalImages(animal).then(photos => {
+      if (!photos.length) return;
+      // Use a larger size for the hero when the URL is a Wikipedia thumbnail.
+      const displaySrc = src => src.startsWith('data:') ? src : upscaleWikiThumb(src, 640);
+      setMainPhoto(displaySrc(photos[0].src));
+
+      if (photos.length > 1) {
+        photos.forEach((p, i) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'thumb' + (i === 0 ? ' active' : '');
+          btn.innerHTML = `<img src="${p.src}" alt="">`;
+          btn.addEventListener('click', () => {
+            setMainPhoto(displaySrc(p.src));
+            thumbStrip.querySelectorAll('.thumb').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+          });
+          thumbStrip.appendChild(btn);
+        });
+      }
+    }).catch(() => {});
   }
 </script>
 </body>
