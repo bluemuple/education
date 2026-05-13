@@ -137,38 +137,17 @@
   .ach-avatar.locked { cursor:default; }
   .ach-name { font-size:24px; font-weight:900; }
   .ach-section h3 { margin:18px 0 8px; font-size:18px; }
-  /* Tiny tool link next to each lesson H3 header */
-  .ach-section h3 .header-tool {
-    display:inline-flex; align-items:center; justify-content:center;
-    width:30px; height:30px;
-    border:2px solid var(--ink); border-radius:8px;
-    background:#fff; font-size:15px; text-decoration:none;
-    vertical-align:middle; margin-left:8px;
-    box-shadow:0 2px 0 rgba(0,0,0,0.12);
-  }
-  .ach-section h3 .header-tool:hover { background:#fff4e0; }
   .play-row { display:flex; flex-wrap:wrap; gap:10px; }
-  .play-pair { display:flex; gap:6px; flex:1; min-width:200px; }
-  .play-pair .play-btn { flex:1; min-width:0; }
   .play-btn {
     flex:1; min-width:180px;
     border:3px solid var(--ink); border-radius:16px; padding:14px 16px; cursor:pointer;
     background:#fff8e8; font-weight:900; font-size:17px; text-align:left;
     box-shadow:var(--shadow); display:flex; align-items:center; gap:10px;
+    /* anchor variant: inherit text colour + no underline */
+    color:inherit; text-decoration:none; font-family:inherit;
   }
+  .play-btn:active { transform:translateY(2px); box-shadow:0 4px 0 rgba(0,0,0,0.18); }
   .play-btn .ic { font-size:30px; }
-  /* Small explorer-tool icon shown next to each lesson button */
-  .lesson-tool {
-    flex:0 0 52px;
-    border:3px solid var(--ink); border-radius:16px;
-    background:#fff;
-    display:flex; align-items:center; justify-content:center;
-    font-size:24px; text-decoration:none;
-    box-shadow:var(--shadow); cursor:pointer;
-    transition: transform 0.06s;
-  }
-  .lesson-tool:hover { background:#fff4e0; }
-  .lesson-tool:active { transform:translateY(2px); box-shadow:0 4px 0 rgba(0,0,0,0.18); }
   .badge-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(110px, 1fr)); gap:10px; }
   .badge-card {
     border:3px solid var(--ink); border-radius:14px; padding:8px;
@@ -310,51 +289,42 @@
     <div class="ach-section">
       <h3>🎮 Let's play</h3>
       <div class="play-row">
-        <div class="play-pair">
-          <button class="play-btn" id="play-2dshapes">
-            <span class="ic">📐</span><span>2D Shapes</span>
-          </button>
-          <a class="lesson-tool" href="fraction_decimal.html" title="Fraction &amp; Decimal Explorer">🔍</a>
-        </div>
-        <div class="play-pair">
-          <button class="play-btn" id="play-ef1">
-            <span class="ic">🍰</span><span>Equivalent Fractions 1</span>
-          </button>
-          <a class="lesson-tool" href="fraction_decimal.html" title="Fraction &amp; Decimal Explorer">🔍</a>
-        </div>
-        <div class="play-pair">
-          <button class="play-btn" id="play-ef2">
-            <span class="ic">🎂</span><span>Equivalent Fractions 2</span>
-          </button>
-          <a class="lesson-tool" href="fraction_decimal.html" title="Fraction &amp; Decimal Explorer">🔍</a>
-        </div>
-        <div class="play-pair">
-          <button class="play-btn" id="play-ef3">
-            <span class="ic">🔟</span><span>Equivalent Fractions 3</span>
-          </button>
-          <a class="lesson-tool" href="fraction_decimal.html" title="Fraction &amp; Decimal Explorer">🔍</a>
-        </div>
+        <button class="play-btn" id="play-2dshapes">
+          <span class="ic">📐</span><span>2D Shapes</span>
+        </button>
+        <button class="play-btn" id="play-ef1">
+          <span class="ic">🍰</span><span>Equivalent Fractions 1</span>
+        </button>
+        <button class="play-btn" id="play-ef2">
+          <span class="ic">🎂</span><span>Equivalent Fractions 2</span>
+        </button>
+        <button class="play-btn" id="play-ef3">
+          <span class="ic">🔟</span><span>Equivalent Fractions 3</span>
+        </button>
+        <a class="play-btn" id="play-fraction-friend" href="fraction_decimal.html">
+          <span class="ic">⚡</span><span>Fraction Friend</span>
+        </a>
       </div>
       <p class="empty" style="font-size:12px;">More buttons coming soon!</p>
     </div>
 
     <div class="ach-section">
-      <h3>📐 2D Shapes <a class="header-tool" href="fraction_decimal.html" title="Fraction &amp; Decimal Explorer">🔍</a></h3>
+      <h3>📐 2D Shapes</h3>
       <div class="badge-grid" id="badge-grid"></div>
     </div>
 
     <div class="ach-section">
-      <h3>🍰 Equivalent Fractions 1 <a class="header-tool" href="fraction_decimal.html" title="Fraction &amp; Decimal Explorer">🔍</a></h3>
+      <h3>🍰 Equivalent Fractions 1</h3>
       <div class="badge-grid" id="badge-grid-ef1"></div>
     </div>
 
     <div class="ach-section">
-      <h3>🎂 Equivalent Fractions 2 <a class="header-tool" href="fraction_decimal.html" title="Fraction &amp; Decimal Explorer">🔍</a></h3>
+      <h3>🎂 Equivalent Fractions 2</h3>
       <div class="badge-grid" id="badge-grid-ef2"></div>
     </div>
 
     <div class="ach-section">
-      <h3>🔟 Equivalent Fractions 3 <a class="header-tool" href="fraction_decimal.html" title="Fraction &amp; Decimal Explorer">🔍</a></h3>
+      <h3>🔟 Equivalent Fractions 3</h3>
       <div class="badge-grid" id="badge-grid-ef3"></div>
     </div>
   </section>
