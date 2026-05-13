@@ -1083,7 +1083,59 @@ const ANIMAL_WIKI = {
 // Students never see these unless a teacher approves one (which copies it into the
 // override's `youtubeId` field, the only thing the student page reads).
 const ANIMAL_VIDEO_SUGGESTIONS = {
-  // Filled in by the curation pass; leave blank for animals without a suggestion.
+  // NZ Native
+  kiwi: "NPc25pbM95c",       tuatara: "0Q1qKSO3bwI",    kea: "0k-PBKax3pg",
+  takahe: "MSt_SHR6sxc",     kakapo: "E3a88_SjJR0",     pukeko: "mLJeVglA6Ww",
+  weka: "dN6FAIl4YWg",       fantail: "bWHsFAcrQOk",    tui: "QshiDOOgR6A",
+  bellbird: "HjMn_hJ-zsY",   "hector-dolphin": "y7Oym6ZiUrI",
+  hoiho: "9eyMYAR_g6w",      "nz-sealion": "M0Pu_3p2gts",
+  weta: "HtDIqicyDQw",       morepork: "HE8X0hUj5LI",
+
+  // Marine
+  dolphin: "VjMn_dVCJyA",    shark: "3kALq2rtPPQ",      whale: "Hiu1l59UFiQ",
+  octopus: "oSyEZAm8nb8",    "sea-turtle": "qJfAbyz4qS0",
+  jellyfish: "u9Q9knJlhww",  seahorse: "XqP0xqbnAMU",   starfish: "SpC6H-RkPyE",
+  crab: "85lFKu_IwCA",       lobster: "jKzjSj1VO3E",    stingray: "nJEKCmi8Hyk",
+  clownfish: "vW5RI8xUW7Y",  orca: "4YOvkXNZ16I",       seal: "bxF1L3i1A9Q",
+  "manta-ray": "SFVueRCmoeI",
+
+  // Wild Mammals
+  lion: "tlZwYsJpqjo",       tiger: "8OmRW4em_vA",      elephant: "Fk3VdpuFx0Q",
+  giraffe: "WSlqkTSOdGA",    zebra: "kWxnadQI5Qw",      monkey: "A6lmmAyvl3I",
+  gorilla: "rHhSCO5-3Pg",    panda: "O5f-4h7L5ts",      "polar-bear": "XdCaBF8NJ00",
+  kangaroo: "QKO3sqic5fc",   koala: "PzU-DjUMzsg",      wolf: "VYKsI5ILiaQ",
+  fox: "bD0mresKnTY",        bear: "54CDgurNMSI",       cheetah: "J20eXhZTHEo",
+  leopard: "8y2B1XgXwxo",    hippo: "ks_P46IZCxk",      rhino: "TYklMREHD-s",
+  camel: "IJ4YajWrDcA",      sloth: "emQ8SujptUk",
+
+  // Birds
+  eagle: "BEgEIEfSuvU",      owl: "ifXMpuNk9RA",        penguin: "tkfJnPOt1eQ",
+  parrot: "NJ9Z6mSIMXk",     flamingo: "ugCyyLOLWt0",   peacock: "8NuJySMSk-4",
+  hummingbird: "remX_MugsOM",toucan: "9QbyE4iPGYU",     pelican: "GVpAR5jl-ZA",
+  swan: "LRPLk6ddfzw",       duck: "qHgKppJq8sY",       ostrich: "qxbxsTy3PPw",
+  woodpecker: "tJizlKZizps", robin: "qGz-pO0QTN4",      seagull: "PHVWPJl4aYc",
+
+  // Reptiles & Amphibians
+  crocodile: "qyTNzTYFqlw",  snake: "uns8vUQNxpc",      gecko: "rspoqBDL738",
+  chameleon: "D1PIcwK7Ggc",  frog: "-r6tZGMep0U",       toad: "QnGWuARQEHY",
+  turtle: "xB0OodoGuUQ",     iguana: "Ef5BL7AvjGs",     salamander: "CUhE5T62mPg",
+  komodo: "BaJizC9NdTY",
+
+  // Insects & Bugs
+  butterfly: "unGHaH7CtBA",  bee: "ta154f5Rp5Y",        ladybug: "KZDMnnGyeoI",
+  ant: "XVFM2bLCTJE",        spider: "3qdxEiIB_Sw",     dragonfly: "lxubbepoz7Q",
+  grasshopper: "z48Nc3ontNA",beetle: "veY5fyt66cg",     caterpillar: "wW5oU5ALh3A",
+  snail: "c8ma6vDvXAM",
+
+  // Farm
+  cow: "C3l27fFeSPk",        sheep: "vK3KsFd2YnQ",      pig: "06sDgp3wZUc",
+  horse: "GCkih9VMrSo",      chicken: "9cKSLWbDk4s",    goat: "QpGDm7KI6Xs",
+  donkey: "JfdXYE3QljA",     rooster: "PO415JIEPUc",    goose: "UC6jWVazSpg",
+  alpaca: "VfPeiVhx3mI",
+
+  // Pets
+  dog: "b43PbeSekDo",        cat: "G5RErqM1RZk",        rabbit: "fklCebi4dtU",
+  hamster: "keIiS_8TvXg",    "guinea-pig": "1GPKI7gg4D0"
 };
 
 // ---------- helpers used by all pages ----------
