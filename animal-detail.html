@@ -111,60 +111,122 @@
     50%      { transform: translateY(-8px) rotate(3deg); }
   }
 
-  .hero-photo {
-    position: relative;
-    z-index: 1;
-    width: clamp(180px, 38vw, 280px);
-    height: clamp(180px, 38vw, 280px);
-    margin: 0 auto;
-    border-radius: 28px;
-    overflow: hidden;
-    box-shadow: 0 12px 28px rgba(202, 122, 122, 0.25);
-    border: 6px solid white;
-    background: var(--bg2);
-    display: none;
-  }
-  .hero-photo img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-  .hero-photo.shown { display: block; }
-  .hero-photo.shown ~ .hero-emoji-fallback { display: none; }
-
-  .thumb-strip {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-    flex-wrap: wrap;
-    margin-top: 16px;
+  .hero-gallery {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin: 0 auto 20px;
+    max-width: 720px;
     position: relative;
     z-index: 1;
   }
-  .thumb-strip .thumb {
-    width: 60px;
-    height: 60px;
-    border-radius: 12px;
-    overflow: hidden;
-    border: 3px solid transparent;
-    cursor: pointer;
+  .gallery-cell {
     background: white;
-    padding: 0;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
-    transition: transform 0.15s, border-color 0.15s;
+    border-radius: 20px;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 8px 22px rgba(202, 122, 122, 0.18);
+    border: 4px solid white;
+    cursor: pointer;
+    transition: transform 0.18s;
   }
-  .thumb-strip .thumb img {
+  .gallery-cell:hover { transform: translateY(-4px); }
+  .gallery-cell .cell-bg {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, #FFF6E6 0%, #FFE5D1 100%);
+    display: grid;
+    place-items: center;
+    font-size: 3.4rem;
+    transition: opacity 0.3s;
+  }
+  .gallery-cell .cell-bg.coloring-bg { background: #FFFEFB; }
+  .gallery-cell.has-image .cell-bg { opacity: 0; }
+  .gallery-cell .cell-bg .cell-empty {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 6px;
+    font-weight: 500;
+    text-align: center;
+    padding: 0 8px;
+  }
+  .gallery-cell img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    display: block;
+    opacity: 0;
+    transition: opacity 0.3s;
   }
-  .thumb-strip .thumb:hover { transform: translateY(-3px); }
-  .thumb-strip .thumb.active {
-    border-color: var(--primary);
-    transform: translateY(-3px);
+  .gallery-cell.coloring img { object-fit: contain; padding: 8px; background: white; }
+  .gallery-cell.has-image img { opacity: 1; }
+  .gallery-cell .cell-label {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: rgba(0,0,0,0.62);
+    color: white;
+    font-size: 0.74rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+    z-index: 2;
+    letter-spacing: 0.02em;
   }
+  .gallery-cell .thumb-dot {
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    display: flex;
+    gap: 4px;
+    z-index: 2;
+  }
+  .gallery-cell .thumb-dot span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.7);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  }
+  .gallery-cell .thumb-dot span.active { background: white; transform: scale(1.2); }
+  @media (max-width: 540px) {
+    .hero-gallery { grid-template-columns: 1fr; max-width: 360px; gap: 12px; }
+    .gallery-cell { aspect-ratio: 4 / 3; }
+  }
+
+  /* Lightbox for click-to-enlarge */
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 24px;
+    cursor: zoom-out;
+  }
+  .lightbox.open { display: flex; }
+  .lightbox img {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+  .lightbox-close {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    border: 0;
+    color: white;
+    font-size: 1.4rem;
+    cursor: pointer;
+  }
+  .lightbox-close:hover { background: rgba(255,255,255,0.3); }
 
   .hero-name {
     font-size: clamp(2rem, 5vw, 3rem);
@@ -350,9 +412,26 @@
 
     content.innerHTML = `
       <div class="hero-card">
-        <div class="hero-photo" id="heroPhoto"><img id="heroPhotoImg" alt="${escapeHTML(animal.name)}"></div>
-        <div class="hero-emoji hero-emoji-fallback">${animal.emoji}</div>
-        <div class="thumb-strip" id="thumbStrip"></div>
+        <div class="hero-gallery" id="heroGallery">
+          <button type="button" class="gallery-cell" data-cat="photos">
+            <span class="cell-label">📷 Photo</span>
+            <div class="cell-bg"><div>${animal.emoji}</div></div>
+            <img alt="${escapeHTML(animal.name)} photo">
+            <div class="thumb-dot"></div>
+          </button>
+          <button type="button" class="gallery-cell" data-cat="cartoons">
+            <span class="cell-label">🎨 Cartoon</span>
+            <div class="cell-bg"><div>🎨<div class="cell-empty">loading…</div></div></div>
+            <img alt="${escapeHTML(animal.name)} cartoon">
+            <div class="thumb-dot"></div>
+          </button>
+          <button type="button" class="gallery-cell coloring" data-cat="coloringPages">
+            <span class="cell-label">🖍️ Coloring</span>
+            <div class="cell-bg coloring-bg"><div>🖍️<div class="cell-empty">loading…</div></div></div>
+            <img alt="${escapeHTML(animal.name)} coloring page">
+            <div class="thumb-dot"></div>
+          </button>
+        </div>
         <h1 class="hero-name">${escapeHTML(animal.name)}</h1>
         <div class="hero-category">${cat ? cat.emoji : ''} ${escapeHTML(cat ? cat.name : '')}</div>
       </div>
@@ -395,37 +474,122 @@
       </div>` : ''}
     `;
 
-    // Load every photo (Wikipedia + teacher-added) and build a gallery.
-    const heroPhoto    = document.getElementById('heroPhoto');
-    const heroPhotoImg = document.getElementById('heroPhotoImg');
-    const thumbStrip   = document.getElementById('thumbStrip');
+    // Build the 3-cell gallery: photo / cartoon / coloring.
+    // Each cell may have multiple images (teacher additions). Dots under the cell
+    // let the kid cycle through them. Clicking the cell opens a lightbox.
+    const cells = {};
+    document.querySelectorAll('#heroGallery .gallery-cell').forEach(cell => {
+      cells[cell.dataset.cat] = cell;
+    });
 
-    function setMainPhoto(src) {
-      heroPhotoImg.onload = () => heroPhoto.classList.add('shown');
-      heroPhotoImg.onerror = () => {};
-      heroPhotoImg.src = src;
+    const cellState = { photos: [], cartoons: [], coloringPages: [] };
+    let lightboxImg, lightbox;
+
+    function setCellImage(cell, src) {
+      const img = cell.querySelector('img');
+      img.onload = () => cell.classList.add('has-image');
+      img.onerror = () => {};
+      img.src = src;
     }
 
-    getAnimalImages(animal).then(photos => {
-      if (!photos.length) return;
-      // Use a larger size for the hero when the URL is a Wikipedia thumbnail.
-      const displaySrc = src => src.startsWith('data:') ? src : upscaleWikiThumb(src, 640);
-      setMainPhoto(displaySrc(photos[0].src));
+    function renderCell(catKey, items) {
+      const cell = cells[catKey];
+      if (!cell) return;
+      const empty = cell.querySelector('.cell-empty');
+      const bg = cell.querySelector('.cell-bg');
+      const dotRow = cell.querySelector('.thumb-dot');
+      dotRow.innerHTML = '';
 
-      if (photos.length > 1) {
-        photos.forEach((p, i) => {
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'thumb' + (i === 0 ? ' active' : '');
-          btn.innerHTML = `<img src="${p.src}" alt="">`;
-          btn.addEventListener('click', () => {
-            setMainPhoto(displaySrc(p.src));
-            thumbStrip.querySelectorAll('.thumb').forEach(t => t.classList.remove('active'));
-            btn.classList.add('active');
-          });
-          thumbStrip.appendChild(btn);
+      if (!items.length) {
+        cell.classList.remove('has-image');
+        if (empty) empty.textContent = catKey === 'photos' ? '' : 'no image yet';
+        return;
+      }
+
+      // Display: prefer larger Wikipedia thumbnail for crispness.
+      const display = src => src.startsWith('data:') ? src : upscaleWikiThumb(src, 480);
+      cellState[catKey] = items.map(i => display(i.src));
+      setCellImage(cell, cellState[catKey][0]);
+
+      if (items.length > 1) {
+        items.forEach((_, i) => {
+          const dot = document.createElement('span');
+          if (i === 0) dot.classList.add('active');
+          dotRow.appendChild(dot);
         });
       }
+    }
+
+    function cycleCell(cell, catKey) {
+      const list = cellState[catKey];
+      if (!list || list.length <= 1) {
+        // Only one image — open lightbox instead
+        openLightbox(list && list[0]);
+        return;
+      }
+      const dotRow = cell.querySelector('.thumb-dot');
+      const dots = Array.from(dotRow.children);
+      const active = dots.findIndex(d => d.classList.contains('active'));
+      const next = (active + 1) % list.length;
+      dots.forEach((d, i) => d.classList.toggle('active', i === next));
+      setCellImage(cell, list[next]);
+    }
+
+    function openLightbox(src) {
+      if (!src) return;
+      if (!lightbox) {
+        lightbox = document.createElement('div');
+        lightbox.className = 'lightbox';
+        lightbox.innerHTML = `
+          <button class="lightbox-close" aria-label="Close">✕</button>
+          <img alt="">
+        `;
+        document.body.appendChild(lightbox);
+        lightboxImg = lightbox.querySelector('img');
+        lightbox.addEventListener('click', e => {
+          if (e.target === lightbox || e.target.classList.contains('lightbox-close')) {
+            lightbox.classList.remove('open');
+            lightboxImg.src = '';
+          }
+        });
+        document.addEventListener('keydown', e => {
+          if (e.key === 'Escape') {
+            lightbox.classList.remove('open');
+            lightboxImg.src = '';
+          }
+        });
+      }
+      lightboxImg.src = src;
+      lightbox.classList.add('open');
+    }
+
+    // Wire up click handlers: single image → lightbox; multi → cycle, then lightbox on
+    // repeat-click of the same image after a small interaction window.
+    Object.entries(cells).forEach(([catKey, cell]) => {
+      cell.addEventListener('click', e => {
+        e.preventDefault();
+        const list = cellState[catKey];
+        if (!list || list.length === 0) return;
+        if (list.length === 1) {
+          openLightbox(list[0]);
+        } else {
+          cycleCell(cell, catKey);
+        }
+      });
+      cell.addEventListener('dblclick', e => {
+        e.preventDefault();
+        const list = cellState[catKey];
+        const dotRow = cell.querySelector('.thumb-dot');
+        const active = Array.from(dotRow.children).findIndex(d => d.classList.contains('active'));
+        openLightbox(list[Math.max(0, active)]);
+      });
+    });
+
+    // Load all three categories in parallel.
+    getAnimalImageSet(animal).then(set => {
+      renderCell('photos', set.photos);
+      renderCell('cartoons', set.cartoons);
+      renderCell('coloringPages', set.coloringPages);
     }).catch(() => {});
   }
 </script>

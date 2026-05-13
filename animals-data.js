@@ -1141,6 +1141,50 @@ const ANIMAL_VIDEO_SUGGESTIONS = {
 // ---------- helpers used by all pages ----------
 const STORAGE_KEY = "animals_admin_overrides_v1";
 const WIKI_CACHE_KEY = "animals_wiki_image_cache_v1";
+const OPENVERSE_CACHE_KEY = "animals_openverse_image_cache_v2";
+
+// Cleaner search-friendly names for animals where the basic id/name gives noisy results.
+// Used by the Openverse cartoon / coloring search.
+const ANIMAL_SEARCH_NAMES = {
+  kiwi: "kiwi bird",
+  weka: "weka bird",
+  tui: "tui bird",
+  pukeko: "pukeko bird",
+  takahe: "takahe",
+  hoiho: "yellow-eyed penguin",
+  weta: "weta insect",
+  morepork: "morepork owl",
+  fantail: "fantail bird",
+  bellbird: "bellbird",
+  kakapo: "kakapo",
+  kea: "kea bird",
+  "hector-dolphin": "hector dolphin",
+  "nz-sealion": "sea lion",
+  rooster: "rooster",
+  robin: "robin bird",
+  swan: "swan",
+  duck: "duck",
+  goose: "goose",
+  shark: "great white shark",
+  whale: "humpback whale",
+  seal: "seal animal",
+  bear: "brown bear",
+  "polar-bear": "polar bear",
+  "sea-turtle": "sea turtle",
+  "manta-ray": "manta ray",
+  snake: "snake reptile",
+  komodo: "komodo dragon",
+  "guinea-pig": "guinea pig"
+};
+
+function getSearchName(animal) {
+  if (!animal) return "";
+  if (ANIMAL_SEARCH_NAMES[animal.id]) return ANIMAL_SEARCH_NAMES[animal.id];
+  // Prefer the English name in parens (e.g. "Pīwakawaka (Fantail)" → "Fantail").
+  const m = animal.name.match(/\((.*?)\)/);
+  if (m) return m[1];
+  return animal.name.replace(/\s*\(.*?\)\s*/g, " ").trim();
+}
 
 function loadOverrides() {
   try {
@@ -1193,31 +1237,118 @@ function upscaleWikiThumb(url, targetWidth) {
 }
 
 // Returns a Promise<string|null> for the Wikipedia photo URL of this animal.
-// Caches results in localStorage so we only hit Wikipedia once per animal.
+// Only successful URLs are cached, so a transient failure doesn't poison the cache.
 async function fetchWikipediaImage(id) {
   const title = ANIMAL_WIKI[id];
   if (!title) return null;
   const cache = loadWikiCache();
-  if (Object.prototype.hasOwnProperty.call(cache, id)) {
-    return cache[id] || null;
-  }
+  if (cache[id]) return cache[id];
   try {
     const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title.replace(/ /g, "_"))}`;
-    const resp = await fetch(url, { headers: { Accept: "application/json" } });
-    if (!resp.ok) {
-      cache[id] = null; saveWikiCache(cache); return null;
-    }
+    const resp = await fetch(url);
+    if (!resp.ok) return null;
     const data = await resp.json();
     const img =
       (data.thumbnail && data.thumbnail.source) ||
       (data.originalimage && data.originalimage.source) ||
       null;
-    cache[id] = img;
-    saveWikiCache(cache);
+    if (img) {
+      cache[id] = img;
+      saveWikiCache(cache);
+    }
     return img;
   } catch (e) {
     return null;
   }
+}
+
+// ---------- Openverse image fetching (cartoons + coloring pages) ----------
+function loadOpenverseCache() {
+  try { return JSON.parse(localStorage.getItem(OPENVERSE_CACHE_KEY) || "{}"); }
+  catch (e) { return {}; }
+}
+function saveOpenverseCache(c) {
+  try { localStorage.setItem(OPENVERSE_CACHE_KEY, JSON.stringify(c)); } catch (e) {}
+}
+
+// Fetches a kid-friendly cartoon or coloring-page image from the Openverse
+// open-license image index. category: 'cartoon' | 'coloring'.
+async function fetchOpenverseImage(id, searchName, category) {
+  if (!searchName) return null;
+  const cacheKey = `${id}__${category}`;
+  const cache = loadOpenverseCache();
+  if (cache[cacheKey]) return cache[cacheKey];
+
+  const query = category === "cartoon"
+    ? `${searchName} cartoon`
+    : `${searchName} coloring page`;
+
+  try {
+    const url = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(query)}&page_size=10`;
+    const resp = await fetch(url);
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const results = (data && data.results) || [];
+    if (results.length === 0) return null;
+
+    // Prefer cleaner-clipart providers first.
+    let best = results.find(r => r.provider === "rawpixel");
+    if (!best) best = results.find(r => r.provider === "wikimedia");
+    if (!best) best = results[0];
+    const imgUrl = best && best.url;
+    if (imgUrl) {
+      cache[cacheKey] = imgUrl;
+      saveOpenverseCache(cache);
+    }
+    return imgUrl || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Teacher's custom additions per category. Handles legacy `image` and `images`.
+function getCustomPhotos(id) {
+  const ov = loadOverrides()[id];
+  if (!ov) return [];
+  if (Array.isArray(ov.photos)) return ov.photos.filter(Boolean);
+  if (Array.isArray(ov.images)) return ov.images.filter(Boolean);
+  if (ov.image) return [ov.image];
+  return [];
+}
+function getCustomCartoons(id) {
+  const ov = loadOverrides()[id];
+  return (ov && Array.isArray(ov.cartoons)) ? ov.cartoons.filter(Boolean) : [];
+}
+function getCustomColoring(id) {
+  const ov = loadOverrides()[id];
+  return (ov && Array.isArray(ov.coloringPages)) ? ov.coloringPages.filter(Boolean) : [];
+}
+
+// Returns a Promise resolving to all images for an animal, grouped by category.
+// Each entry is { src, source } where source ∈ {wikipedia, openverse, custom}.
+async function getAnimalImageSet(animal) {
+  if (!animal) return { photos: [], cartoons: [], coloringPages: [] };
+  const searchName = getSearchName(animal);
+
+  // Photos: Wikipedia default + teacher additions.
+  const photos = [];
+  const wiki = await fetchWikipediaImage(animal.id);
+  if (wiki) photos.push({ src: wiki, source: "wikipedia" });
+  getCustomPhotos(animal.id).forEach(s => photos.push({ src: s, source: "custom" }));
+
+  // Cartoons: Openverse default + teacher additions.
+  const cartoons = [];
+  const cartoonUrl = await fetchOpenverseImage(animal.id, searchName, "cartoon");
+  if (cartoonUrl) cartoons.push({ src: cartoonUrl, source: "openverse" });
+  getCustomCartoons(animal.id).forEach(s => cartoons.push({ src: s, source: "custom" }));
+
+  // Coloring pages: Openverse default + teacher additions.
+  const coloringPages = [];
+  const coloringUrl = await fetchOpenverseImage(animal.id, searchName, "coloring");
+  if (coloringUrl) coloringPages.push({ src: coloringUrl, source: "openverse" });
+  getCustomColoring(animal.id).forEach(s => coloringPages.push({ src: s, source: "custom" }));
+
+  return { photos, cartoons, coloringPages };
 }
 
 // Reads the teacher's custom photos for an animal as an array of data URLs.

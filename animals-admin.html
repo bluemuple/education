@@ -298,11 +298,29 @@
   .add-fact-btn:hover { background: #ECEAFD; }
 
   /* photo editor */
+  .picture-group {
+    margin-bottom: 14px;
+    padding: 10px 12px;
+    background: var(--bg);
+    border-radius: 12px;
+  }
+  .picture-group-title {
+    font-weight: 700;
+    font-size: 0.92rem;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+  .picture-group-title .group-hint {
+    font-weight: 500;
+    color: var(--muted);
+    font-size: 0.78rem;
+    margin-left: 4px;
+  }
   .photo-gallery {
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
   }
   .photo-tile {
     width: 110px;
@@ -528,14 +546,37 @@
 
       <div class="modal-body">
         <div class="field">
-          <label>Photos</label>
-          <div class="hint">The first tile is the Wikipedia default photo. Click <b>📋 Paste Image</b> and then press <b>Cmd+V</b> (or Ctrl+V) to add another photo next to it. You can also pick a file. Click <b>×</b> on a custom photo to remove it.</div>
-          <div class="photo-gallery" id="photoGallery"></div>
-          <div class="photo-buttons">
-            <button type="button" class="btn ghost" id="pasteImageBtn">📋 Paste Image</button>
-            <button type="button" class="btn ghost" id="pickImageBtn">📁 Add file</button>
-            <input id="pickImageFile" type="file" accept="image/*" hidden>
+          <label>Pictures</label>
+          <div class="hint">Each animal has 3 picture types on the student page. Defaults are auto-fetched (Wikipedia photo, Openverse cartoon &amp; coloring). Click <b>📋 Paste</b> in a section, then press <b>Cmd+V</b> to add your own. Click <b>×</b> on a custom picture to remove it.</div>
+
+          <div class="picture-group">
+            <div class="picture-group-title">📷 Real photos <span class="group-hint">(default: Wikipedia)</span></div>
+            <div class="photo-gallery" id="galleryPhotos" data-cat="photos"></div>
+            <div class="photo-buttons">
+              <button type="button" class="btn ghost paste-btn" data-cat="photos">📋 Paste</button>
+              <button type="button" class="btn ghost pick-btn" data-cat="photos">📁 File</button>
+            </div>
           </div>
+
+          <div class="picture-group">
+            <div class="picture-group-title">🎨 Cartoons <span class="group-hint">(default: Openverse)</span></div>
+            <div class="photo-gallery" id="galleryCartoons" data-cat="cartoons"></div>
+            <div class="photo-buttons">
+              <button type="button" class="btn ghost paste-btn" data-cat="cartoons">📋 Paste</button>
+              <button type="button" class="btn ghost pick-btn" data-cat="cartoons">📁 File</button>
+            </div>
+          </div>
+
+          <div class="picture-group">
+            <div class="picture-group-title">🖍️ Coloring pages <span class="group-hint">(default: Openverse)</span></div>
+            <div class="photo-gallery" id="galleryColoring" data-cat="coloringPages"></div>
+            <div class="photo-buttons">
+              <button type="button" class="btn ghost paste-btn" data-cat="coloringPages">📋 Paste</button>
+              <button type="button" class="btn ghost pick-btn" data-cat="coloringPages">📁 File</button>
+            </div>
+          </div>
+
+          <input id="pickImageFile" type="file" accept="image/*" hidden>
           <div class="paste-hint" id="pasteHint">📋 Now press <b>Cmd+V</b> (or Ctrl+V) to paste your copied image…</div>
         </div>
 
@@ -626,18 +667,24 @@
   const searchYoutubeLink   = document.getElementById('searchYoutubeLink');
   const approvedPill        = document.getElementById('approvedPill');
 
-  // photo refs
-  const photoGallery  = document.getElementById('photoGallery');
-  const pasteImageBtn = document.getElementById('pasteImageBtn');
-  const pickImageBtn  = document.getElementById('pickImageBtn');
+  // photo refs (three galleries: photos / cartoons / coloringPages)
+  const CATS = ['photos', 'cartoons', 'coloringPages'];
+  const CAT_LABEL = { photos: 'Photo', cartoons: 'Cartoon', coloringPages: 'Coloring' };
+  const galleries = {
+    photos:        document.getElementById('galleryPhotos'),
+    cartoons:      document.getElementById('galleryCartoons'),
+    coloringPages: document.getElementById('galleryColoring')
+  };
   const pickImageFile = document.getElementById('pickImageFile');
   const pasteHint     = document.getElementById('pasteHint');
 
   let activeId = null;
-  // Photos being edited in the modal: array of data URLs added by the teacher.
-  let pendingCustomImages = [];
-  // The cached Wikipedia URL for the currently-edited animal (default tile).
-  let pendingWikiUrl = null;
+  // Per-category teacher-added images (data URLs).
+  const pendingCustom = { photos: [], cartoons: [], coloringPages: [] };
+  // Per-category default image URL (auto-fetched: Wikipedia / Openverse).
+  const pendingDefault = { photos: null, cartoons: null, coloringPages: null };
+  // Which category is currently awaiting a paste/file pick.
+  let activePasteCategory = null;
   let waitingForPaste = false;
 
   function toast(msg) {
@@ -757,14 +804,31 @@
     // Always update the YouTube search link to the current animal.
     searchYoutubeLink.href = `https://www.youtube.com/results?search_query=${encodeURIComponent(animal.name + ' facts for kids')}`;
 
-    // ----- photos -----
-    pendingCustomImages = getCustomImages(id).slice();
-    pendingWikiUrl = null;
-    renderPhotoGallery();
+    // ----- pictures (3 categories) -----
+    pendingCustom.photos        = getCustomPhotos(id).slice();
+    pendingCustom.cartoons      = getCustomCartoons(id).slice();
+    pendingCustom.coloringPages = getCustomColoring(id).slice();
+    pendingDefault.photos = null;
+    pendingDefault.cartoons = null;
+    pendingDefault.coloringPages = null;
+    CATS.forEach(renderPhotoGallery);
+
+    const searchName = getSearchName(animal);
+    // Fetch defaults in parallel — update each category's gallery as it arrives.
     fetchWikipediaImage(id).then(src => {
       if (activeId !== id) return;
-      pendingWikiUrl = src || null;
-      renderPhotoGallery();
+      pendingDefault.photos = src || null;
+      renderPhotoGallery('photos');
+    });
+    fetchOpenverseImage(id, searchName, 'cartoon').then(src => {
+      if (activeId !== id) return;
+      pendingDefault.cartoons = src || null;
+      renderPhotoGallery('cartoons');
+    });
+    fetchOpenverseImage(id, searchName, 'coloring').then(src => {
+      if (activeId !== id) return;
+      pendingDefault.coloringPages = src || null;
+      renderPhotoGallery('coloringPages');
     });
     hidePasteHint();
 
@@ -775,55 +839,60 @@
   function closeEditor() {
     modalBackdrop.classList.remove('open');
     activeId = null;
-    pendingCustomImages = [];
-    pendingWikiUrl = null;
+    CATS.forEach(c => { pendingCustom[c] = []; pendingDefault[c] = null; });
+    activePasteCategory = null;
     hidePasteHint();
     ytIframe.src = "";
     suggestionIframe.src = "";
     suggestionCard.classList.remove('shown');
   }
 
-  function renderPhotoGallery() {
-    photoGallery.innerHTML = '';
+  function renderPhotoGallery(cat) {
+    const gallery = galleries[cat];
+    if (!gallery) return;
+    gallery.innerHTML = '';
+    const label = CAT_LABEL[cat];
+    const defaultSrc = pendingDefault[cat];
+    const customs = pendingCustom[cat];
 
-    // 1. Wikipedia default tile (always shown if available, no remove button).
-    if (pendingWikiUrl) {
+    // 1. Default tile (auto-fetched). Always shown; never has a remove button.
+    if (defaultSrc) {
       const tile = document.createElement('div');
       tile.className = 'photo-tile';
       tile.innerHTML = `
-        <img src="${upscaleWikiThumb(pendingWikiUrl, 240)}" alt="Wikipedia photo">
+        <img src="${defaultSrc}" alt="Default ${label.toLowerCase()}">
         <span class="badge default">Default</span>
       `;
-      photoGallery.appendChild(tile);
+      gallery.appendChild(tile);
     } else {
       const tile = document.createElement('div');
       tile.className = 'photo-tile empty';
-      tile.textContent = 'Wikipedia photo loading…';
-      photoGallery.appendChild(tile);
+      tile.textContent = `Default ${label.toLowerCase()} loading…`;
+      gallery.appendChild(tile);
     }
 
-    // 2. Each custom photo with a remove button.
-    pendingCustomImages.forEach((src, idx) => {
+    // 2. Teacher-added tiles, with × remove buttons.
+    customs.forEach((src, idx) => {
       const tile = document.createElement('div');
       tile.className = 'photo-tile';
       tile.innerHTML = `
-        <img src="${src}" alt="Custom photo">
+        <img src="${src}" alt="Custom ${label.toLowerCase()}">
         <span class="badge">Custom</span>
-        <button type="button" class="remove-btn" title="Remove this photo" aria-label="Remove">×</button>
+        <button type="button" class="remove-btn" title="Remove" aria-label="Remove">×</button>
       `;
       tile.querySelector('.remove-btn').addEventListener('click', () => {
-        pendingCustomImages.splice(idx, 1);
-        renderPhotoGallery();
+        customs.splice(idx, 1);
+        renderPhotoGallery(cat);
       });
-      photoGallery.appendChild(tile);
+      gallery.appendChild(tile);
     });
 
-    // 3. Empty hint when there are no custom photos yet.
-    if (pendingCustomImages.length === 0) {
+    // 3. Empty-add hint tile.
+    if (customs.length === 0) {
       const hint = document.createElement('div');
       hint.className = 'photo-tile empty';
-      hint.innerHTML = `<span>＋<br>Paste or add a photo</span>`;
-      photoGallery.appendChild(hint);
+      hint.innerHTML = `<span>＋<br>Paste / add</span>`;
+      gallery.appendChild(hint);
     }
   }
 
@@ -864,12 +933,15 @@
       toast("That doesn't look like an image.");
       return;
     }
+    const cat = activePasteCategory || 'photos';
     try {
       const dataUrl = await compressImage(blob);
-      pendingCustomImages.push(dataUrl);
-      renderPhotoGallery();
+      pendingCustom[cat].push(dataUrl);
+      renderPhotoGallery(cat);
       hidePasteHint();
-      toast('Photo added ✓ Click Save to keep it.');
+      activePasteCategory = null;
+      const label = CAT_LABEL[cat].toLowerCase();
+      toast(`${CAT_LABEL[cat]} added ✓ Click Save to keep it.`);
     } catch (e) {
       toast("Couldn't read that image.");
     }
@@ -948,7 +1020,9 @@
       diet:    fDiet.value.trim(),
       funFacts: facts,
       youtubeId: ytId,
-      images: pendingCustomImages.slice()
+      photos:        pendingCustom.photos.slice(),
+      cartoons:      pendingCustom.cartoons.slice(),
+      coloringPages: pendingCustom.coloringPages.slice()
     };
 
     // Only store fields that differ from defaults, so "edited" badge stays meaningful
@@ -957,7 +1031,9 @@
     if (next.diet    !== base.diet)    diff.diet    = next.diet;
     if (JSON.stringify(next.funFacts) !== JSON.stringify(base.funFacts)) diff.funFacts = next.funFacts;
     if (next.youtubeId) diff.youtubeId = next.youtubeId;
-    if (next.images.length) diff.images = next.images;
+    if (next.photos.length)        diff.photos        = next.photos;
+    if (next.cartoons.length)      diff.cartoons      = next.cartoons;
+    if (next.coloringPages.length) diff.coloringPages = next.coloringPages;
 
     if (Object.keys(diff).length === 0) {
       delete overrides[activeId];
@@ -1051,11 +1127,20 @@
     factsRows.lastElementChild.querySelector('input').focus();
   });
 
-  pasteImageBtn.addEventListener('click', () => {
-    showPasteHint();
-    toast('📋 Press Cmd+V (or Ctrl+V) to paste.');
+  // Delegate per-category Paste / File buttons.
+  document.querySelectorAll('.paste-btn[data-cat]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activePasteCategory = btn.dataset.cat;
+      showPasteHint();
+      toast(`📋 Press Cmd+V to paste a ${CAT_LABEL[activePasteCategory].toLowerCase()}.`);
+    });
   });
-  pickImageBtn.addEventListener('click', () => pickImageFile.click());
+  document.querySelectorAll('.pick-btn[data-cat]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activePasteCategory = btn.dataset.cat;
+      pickImageFile.click();
+    });
+  });
   pickImageFile.addEventListener('change', e => {
     const f = e.target.files && e.target.files[0];
     if (f) applyImageFile(f);
