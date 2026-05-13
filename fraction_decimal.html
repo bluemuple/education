@@ -18,7 +18,20 @@
     padding: 10px 24px;
     font-size: 20px; font-weight: 700;
     flex: 0 0 auto;
+    display: flex; align-items: center; gap: 14px;
   }
+  .header .back-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,0.15);
+    color: #fff; text-decoration: none;
+    border: 1.5px solid rgba(255,255,255,0.45);
+    border-radius: 999px;
+    padding: 5px 14px;
+    font-size: 13px; font-weight: 700;
+    transition: background 0.15s;
+  }
+  .header .back-btn:hover { background: rgba(255,255,255,0.28); }
+  .header .header-title { flex: 1; }
   .hint {
     text-align: center;
     color: #777;
@@ -238,7 +251,10 @@
 </head>
 <body>
 
-<div class="header">Fraction and Decimal</div>
+<div class="header">
+  <a class="back-btn" href="student.html" title="Back to the achievement page">← Menu</a>
+  <span class="header-title">Fraction and Decimal</span>
+</div>
 <div class="hint">Change any fraction and the others become exact equivalents — denominators are adjusted automatically when needed. Drag Pikachu along the line to slide the decimal.</div>
 
 <!-- Three columns -->
@@ -1057,7 +1073,31 @@
 
   /* ===== Initial render ===== */
   buildNumberLine();
-  updateLinked('init');
+
+  /* ===== URL-param preload =====
+     fraction_decimal.html?num=3&den=10           → loads 3/10  (decimal auto-fills)
+     fraction_decimal.html?dec=0.5                → loads 0.5
+     fraction_decimal.html?num=1&den=2&eqDen=10   → 1/2 with equivalent box pre-set to ?/10
+     fraction_decimal.html?pizzaNum=1&pizzaDen=3  → pizza pre-set */
+  (function preloadFromUrl(){
+    const p = new URLSearchParams(location.search);
+    let source = 'init';
+    const numEl   = document.getElementById('numerator');
+    const denEl   = document.getElementById('denominator');
+    const eqNumEl = document.getElementById('eq-numerator');
+    const eqDenEl = document.getElementById('eq-denominator');
+    const decEl   = document.getElementById('decimal');
+    const pNumEl  = document.getElementById('pizza-num');
+    const pDenEl  = document.getElementById('pizza-denom');
+    if (p.has('num'))      { numEl.value   = p.get('num'); source = 'fraction-num'; }
+    if (p.has('den'))      { denEl.value   = p.get('den'); source = 'fraction-denom'; }
+    if (p.has('eqNum'))    { eqNumEl.value = p.get('eqNum'); source = 'eq-num'; }
+    if (p.has('eqDen'))    { eqDenEl.value = p.get('eqDen'); source = 'eq-denom'; }
+    if (p.has('dec'))      { decEl.value   = p.get('dec'); source = 'decimal'; }
+    if (p.has('pizzaNum')) { pNumEl.value  = p.get('pizzaNum'); source = 'pizza-num'; }
+    if (p.has('pizzaDen')) { pDenEl.value  = p.get('pizzaDen'); source = 'pizza-denom'; }
+    updateLinked(source);
+  })();
 </script>
 </body>
 </html>
