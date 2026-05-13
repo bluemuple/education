@@ -546,8 +546,8 @@
     }
 
     // Pokemon markers above each 0.1 tick. Click any pokemon to jump pika to that value.
-    const pokemonSize = 10;   // 80% smaller (was 50)
-    const pokemonY = 44;      // shifted down so the tiny image still sits just above the line
+    const pokemonSize = 40;   // 80% of original (was 50)
+    const pokemonY = 14;      // bottom edge sits at the same spot as before
     for (let i = 0; i < 10; i++) {
       const v = (i + 1) / 10;                      // 0.1, 0.2, …, 1.0
       const cx = x0 + v * (x1 - x0);
