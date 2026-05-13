@@ -222,6 +222,18 @@
     min-height: 40px; margin-top: 2px;
   }
   .decimal-display.hidden { visibility: hidden; }
+  /* Hero-sized decimal display at the top of the Decimal area */
+  .decimal-section .decimal-display {
+    min-height: 96px;
+    margin: 6px 0 16px;
+  }
+  .decimal-section .decimal-display input {
+    width: 200px;
+    font-size: 64px;
+    font-weight: 800;
+    padding: 4px 14px;
+    border-width: 3px;
+  }
 </style>
 </head>
 <body>
@@ -286,15 +298,15 @@
 <!-- Decimal section (bottom) -->
 <div class="decimal-section">
   <h2>Decimal</h2>
+  <div class="decimal-display" id="display-decimal">
+    <input type="number" id="decimal" value="0.5" step="0.1" min="0" max="1" />
+  </div>
   <div class="number-line-wrap" id="number-line-wrap">
     <div class="number-line-row">
       <button class="step-btn" id="dec-step-left" type="button" aria-label="Decrease by 0.1" title="−0.1">◀</button>
-      <svg id="number-line-svg" viewBox="0 0 1000 155" preserveAspectRatio="xMidYMid meet"></svg>
+      <svg id="number-line-svg" viewBox="0 0 1000 180" preserveAspectRatio="xMidYMid meet"></svg>
       <button class="step-btn" id="dec-step-right" type="button" aria-label="Increase by 0.1" title="+0.1">▶</button>
     </div>
-  </div>
-  <div class="decimal-display" id="display-decimal">
-    <input type="number" id="decimal" value="0.5" step="0.1" min="0" max="1" />
   </div>
   <div class="buttons">
     <button class="btn" id="hide-diagram-decimal">Hide Diagram</button>
@@ -534,7 +546,8 @@
 
       if (major) {
         const label = document.createElementNS(xmlns, 'text');
-        label.setAttribute('x', x); label.setAttribute('y', y + 50);
+        // Number labels now sit ABOVE the line (swapped with pokemon markers)
+        label.setAttribute('x', x); label.setAttribute('y', y - 30);
         label.setAttribute('text-anchor', 'middle');
         label.setAttribute('font-size', '20');
         label.setAttribute('font-family', 'Helvetica Neue, Arial, sans-serif');
@@ -545,9 +558,10 @@
       }
     }
 
-    // Pokemon markers above each 0.1 tick. Click any pokemon to jump pika to that value.
-    const pokemonSize = 40;   // 80% of original (was 50)
-    const pokemonY = 14;      // bottom edge sits at the same spot as before
+    // Pokemon markers now BELOW each 0.1 tick (swapped with the number labels).
+    // Click any pokemon to jump pika to that value.
+    const pokemonSize = 40;
+    const pokemonY = y + 28;  // below the line, just under Pika's feet
     for (let i = 0; i < 10; i++) {
       const v = (i + 1) / 10;                      // 0.1, 0.2, …, 1.0
       const cx = x0 + v * (x1 - x0);
