@@ -170,6 +170,14 @@
     flex-shrink: 0;
   }
   .animal-item .edited.hidden { display: none; }
+  .animal-item .yt-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .animal-item .yt-dot.approved { background: var(--success); }
+  .animal-item .yt-dot.suggested { background: var(--accent); }
 
   /* Modal */
   .modal-backdrop {
@@ -374,6 +382,52 @@
     50%      { transform: scale(1.015); }
   }
 
+  /* suggested-video review card */
+  .suggestion-card {
+    background: #FFF8E0;
+    border: 2px dashed var(--accent);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 12px;
+    display: none;
+  }
+  .suggestion-card.shown { display: block; }
+  .suggestion-card .header {
+    font-weight: 700;
+    color: #7a5a14;
+    margin-bottom: 4px;
+    font-size: 0.95rem;
+  }
+  .suggestion-card .sub {
+    color: #957a3a;
+    font-size: 0.82rem;
+    margin-bottom: 10px;
+  }
+  .suggestion-card .yt-preview {
+    margin-bottom: 10px;
+    display: block;
+  }
+  .suggestion-card .row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .suggestion-card .btn.approve {
+    background: var(--success);
+  }
+  .suggestion-card .btn.approve:hover { background: #56b07c; }
+
+  .approved-pill {
+    display: inline-block;
+    background: #E0F4E9;
+    color: #2a7a4f;
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-left: 8px;
+  }
+
   .yt-preview {
     margin-top: 10px;
     border-radius: 10px;
@@ -502,8 +556,22 @@
         </div>
 
         <div class="field">
-          <label for="fYoutube">YouTube video</label>
+          <label for="fYoutube">YouTube video <span class="approved-pill" id="approvedPill" style="display:none">✓ Approved · students can see this</span></label>
           <div class="hint">Paste a full YouTube URL (e.g. https://youtu.be/abc123). Leave empty to hide the video section for students.</div>
+
+          <div class="suggestion-card" id="suggestionCard">
+            <div class="header">📺 Suggested video — please review before students see it</div>
+            <div class="sub">Students will NOT see this until you click <b>Approve</b>.</div>
+            <div class="yt-preview" style="display:block">
+              <iframe id="suggestionIframe" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+            </div>
+            <div class="row">
+              <button type="button" class="btn approve" id="approveSuggestionBtn">✓ Approve & show to students</button>
+              <button type="button" class="btn ghost" id="rejectSuggestionBtn">✕ Not this one</button>
+              <a class="btn ghost" id="searchYoutubeLink" target="_blank" rel="noopener">🔎 Search YouTube</a>
+            </div>
+          </div>
+
           <input id="fYoutube" type="text" placeholder="https://www.youtube.com/watch?v=..." />
           <div class="yt-status" id="ytStatus"></div>
           <div class="yt-preview" id="ytPreview"><iframe id="ytIframe" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>
@@ -549,6 +617,14 @@
   const ytPreview= document.getElementById('ytPreview');
   const ytIframe = document.getElementById('ytIframe');
   const toastEl  = document.getElementById('toast');
+
+  // suggestion refs
+  const suggestionCard      = document.getElementById('suggestionCard');
+  const suggestionIframe    = document.getElementById('suggestionIframe');
+  const approveSuggestionBtn= document.getElementById('approveSuggestionBtn');
+  const rejectSuggestionBtn = document.getElementById('rejectSuggestionBtn');
+  const searchYoutubeLink   = document.getElementById('searchYoutubeLink');
+  const approvedPill        = document.getElementById('approvedPill');
 
   // photo refs
   const photoGallery  = document.getElementById('photoGallery');
@@ -609,10 +685,17 @@
         const btn = document.createElement('button');
         btn.className = 'animal-item';
         btn.type = 'button';
-        const isEdited = !!overrides[a.id];
+        const ov = overrides[a.id];
+        const isEdited = !!ov;
+        const isApproved = !!(ov && ov.youtubeId);
+        const hasSuggestion = !isApproved && !!ANIMAL_VIDEO_SUGGESTIONS[a.id];
+        let ytDot = '';
+        if (isApproved)         ytDot = `<span class="yt-dot approved"  title="Video approved"></span>`;
+        else if (hasSuggestion) ytDot = `<span class="yt-dot suggested" title="Video suggestion waiting for review"></span>`;
         btn.innerHTML = `
           <span class="em">${a.emoji}</span>
           <span class="nm">${escapeHTML(a.name)}</span>
+          ${ytDot}
           <span class="edited ${isEdited ? '' : 'hidden'}" title="Edited"></span>
         `;
         btn.addEventListener('click', () => openEditor(a.id));
@@ -669,6 +752,10 @@
 
     fYoutube.value = animal.youtubeId || animal.youtubeUrl || '';
     updateYTPreview();
+    updateSuggestionCard(animal);
+
+    // Always update the YouTube search link to the current animal.
+    searchYoutubeLink.href = `https://www.youtube.com/results?search_query=${encodeURIComponent(animal.name + ' facts for kids')}`;
 
     // ----- photos -----
     pendingCustomImages = getCustomImages(id).slice();
@@ -688,19 +775,55 @@
   function closeEditor() {
     modalBackdrop.classList.remove('open');
     activeId = null;
-    pendingCustomImage = null;
+    pendingCustomImages = [];
+    pendingWikiUrl = null;
     hidePasteHint();
     ytIframe.src = "";
+    suggestionIframe.src = "";
+    suggestionCard.classList.remove('shown');
   }
 
-  function setPhotoPreview(src, sourceLabel) {
-    if (src) {
-      photoImg.src = src;
-      photoPreview.classList.add('has-image');
-      photoSourceBadge.textContent = sourceLabel || '';
+  function renderPhotoGallery() {
+    photoGallery.innerHTML = '';
+
+    // 1. Wikipedia default tile (always shown if available, no remove button).
+    if (pendingWikiUrl) {
+      const tile = document.createElement('div');
+      tile.className = 'photo-tile';
+      tile.innerHTML = `
+        <img src="${upscaleWikiThumb(pendingWikiUrl, 240)}" alt="Wikipedia photo">
+        <span class="badge default">Default</span>
+      `;
+      photoGallery.appendChild(tile);
     } else {
-      photoImg.removeAttribute('src');
-      photoPreview.classList.remove('has-image');
+      const tile = document.createElement('div');
+      tile.className = 'photo-tile empty';
+      tile.textContent = 'Wikipedia photo loading…';
+      photoGallery.appendChild(tile);
+    }
+
+    // 2. Each custom photo with a remove button.
+    pendingCustomImages.forEach((src, idx) => {
+      const tile = document.createElement('div');
+      tile.className = 'photo-tile';
+      tile.innerHTML = `
+        <img src="${src}" alt="Custom photo">
+        <span class="badge">Custom</span>
+        <button type="button" class="remove-btn" title="Remove this photo" aria-label="Remove">×</button>
+      `;
+      tile.querySelector('.remove-btn').addEventListener('click', () => {
+        pendingCustomImages.splice(idx, 1);
+        renderPhotoGallery();
+      });
+      photoGallery.appendChild(tile);
+    });
+
+    // 3. Empty hint when there are no custom photos yet.
+    if (pendingCustomImages.length === 0) {
+      const hint = document.createElement('div');
+      hint.className = 'photo-tile empty';
+      hint.innerHTML = `<span>＋<br>Paste or add a photo</span>`;
+      photoGallery.appendChild(hint);
     }
   }
 
@@ -743,8 +866,8 @@
     }
     try {
       const dataUrl = await compressImage(blob);
-      pendingCustomImage = dataUrl;
-      setPhotoPreview(dataUrl, 'Custom');
+      pendingCustomImages.push(dataUrl);
+      renderPhotoGallery();
       hidePasteHint();
       toast('Photo added ✓ Click Save to keep it.');
     } catch (e) {
@@ -768,6 +891,21 @@
     }
     toast("No image found in clipboard. Copy an image first, then try again.");
   });
+
+  // Show the suggestion card if there's a suggestion AND the teacher hasn't already
+  // approved a video for this animal. Approval = saving an override.youtubeId.
+  function updateSuggestionCard(animal) {
+    const hasApproved = !!(animal.youtubeId && extractYouTubeId(animal.youtubeId));
+    const sug = animal.suggestedYoutubeId || "";
+    approvedPill.style.display = hasApproved ? 'inline-block' : 'none';
+    if (sug && !hasApproved) {
+      suggestionIframe.src = `https://www.youtube.com/embed/${encodeURIComponent(sug)}`;
+      suggestionCard.classList.add('shown');
+    } else {
+      suggestionIframe.src = "";
+      suggestionCard.classList.remove('shown');
+    }
+  }
 
   function updateYTPreview() {
     const raw = fYoutube.value.trim();
@@ -810,7 +948,7 @@
       diet:    fDiet.value.trim(),
       funFacts: facts,
       youtubeId: ytId,
-      image: pendingCustomImage || ""
+      images: pendingCustomImages.slice()
     };
 
     // Only store fields that differ from defaults, so "edited" badge stays meaningful
@@ -819,7 +957,7 @@
     if (next.diet    !== base.diet)    diff.diet    = next.diet;
     if (JSON.stringify(next.funFacts) !== JSON.stringify(base.funFacts)) diff.funFacts = next.funFacts;
     if (next.youtubeId) diff.youtubeId = next.youtubeId;
-    if (next.image) diff.image = next.image;
+    if (next.images.length) diff.images = next.images;
 
     if (Object.keys(diff).length === 0) {
       delete overrides[activeId];
@@ -923,20 +1061,36 @@
     if (f) applyImageFile(f);
     e.target.value = '';
   });
-  clearImageBtn.addEventListener('click', async () => {
-    pendingCustomImage = null;
-    setPhotoPreview(null, 'Wikipedia');
-    hidePasteHint();
-    if (activeId) {
-      const wikiSrc = await fetchWikipediaImage(activeId);
-      if (wikiSrc && !pendingCustomImage) {
-        setPhotoPreview(upscaleWikiThumb(wikiSrc, 480), 'Wikipedia');
-      }
+
+  fYoutube.addEventListener('input', () => {
+    updateYTPreview();
+    // Refresh the suggestion card visibility — once the teacher pastes anything,
+    // the suggestion goes away (they've taken over).
+    const animal = activeId ? getMergedAnimal(activeId) : null;
+    if (animal) {
+      // Treat any non-empty input as "approved-in-progress" for the card.
+      animal.youtubeId = fYoutube.value.trim();
+      updateSuggestionCard(animal);
     }
-    toast('Will use the default photo. Click Save.');
   });
 
-  fYoutube.addEventListener('input', updateYTPreview);
+  approveSuggestionBtn.addEventListener('click', () => {
+    if (!activeId) return;
+    const animal = getMergedAnimal(activeId);
+    if (!animal || !animal.suggestedYoutubeId) return;
+    fYoutube.value = `https://www.youtube.com/watch?v=${animal.suggestedYoutubeId}`;
+    updateYTPreview();
+    suggestionCard.classList.remove('shown');
+    suggestionIframe.src = "";
+    approvedPill.style.display = 'inline-block';
+    toast('Approved ✓ Click Save to publish to students.');
+  });
+
+  rejectSuggestionBtn.addEventListener('click', () => {
+    suggestionCard.classList.remove('shown');
+    suggestionIframe.src = "";
+    toast('Suggestion dismissed. Paste your own URL or use the YouTube search.');
+  });
 
   searchInput.addEventListener('input', renderList);
   filterEdited.addEventListener('change', renderList);

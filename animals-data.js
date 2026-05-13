@@ -1079,6 +1079,13 @@ const ANIMAL_WIKI = {
   "guinea-pig": "Guinea pig"
 };
 
+// Suggested YouTube video IDs per animal id — visible only to teachers for review.
+// Students never see these unless a teacher approves one (which copies it into the
+// override's `youtubeId` field, the only thing the student page reads).
+const ANIMAL_VIDEO_SUGGESTIONS = {
+  // Filled in by the curation pass; leave blank for animals without a suggestion.
+};
+
 // ---------- helpers used by all pages ----------
 const STORAGE_KEY = "animals_admin_overrides_v1";
 const WIKI_CACHE_KEY = "animals_wiki_image_cache_v1";
@@ -1096,19 +1103,22 @@ function saveOverrides(overrides) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(overrides));
 }
 
+function withSuggestion(base, override) {
+  const merged = override ? { ...base, ...override } : { ...base };
+  // suggestedYoutubeId is for the teacher to review — never read by the student page.
+  merged.suggestedYoutubeId = ANIMAL_VIDEO_SUGGESTIONS[base.id] || "";
+  return merged;
+}
+
 function getMergedAnimals() {
   const overrides = loadOverrides();
-  return ANIMALS.map(a => {
-    const o = overrides[a.id];
-    return o ? { ...a, ...o } : { ...a };
-  });
+  return ANIMALS.map(a => withSuggestion(a, overrides[a.id]));
 }
 
 function getMergedAnimal(id) {
   const base = ANIMALS.find(a => a.id === id);
   if (!base) return null;
-  const o = loadOverrides()[id];
-  return o ? { ...base, ...o } : { ...base };
+  return withSuggestion(base, loadOverrides()[id]);
 }
 
 function getCategoryById(id) {
