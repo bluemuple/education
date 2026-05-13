@@ -137,6 +137,16 @@
   .ach-avatar.locked { cursor:default; }
   .ach-name { font-size:24px; font-weight:900; }
   .ach-section h3 { margin:18px 0 8px; font-size:18px; }
+  /* Tiny tool link next to each lesson H3 header */
+  .ach-section h3 .header-tool {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:30px; height:30px;
+    border:2px solid var(--ink); border-radius:8px;
+    background:#fff; font-size:15px; text-decoration:none;
+    vertical-align:middle; margin-left:8px;
+    box-shadow:0 2px 0 rgba(0,0,0,0.12);
+  }
+  .ach-section h3 .header-tool:hover { background:#fff4e0; }
   .play-row { display:flex; flex-wrap:wrap; gap:10px; }
   .play-pair { display:flex; gap:6px; flex:1; min-width:200px; }
   .play-pair .play-btn { flex:1; min-width:0; }
@@ -329,22 +339,22 @@
     </div>
 
     <div class="ach-section">
-      <h3>📐 2D Shapes</h3>
+      <h3>📐 2D Shapes <a class="header-tool" href="fraction_decimal.html" title="Fraction &amp; Decimal Explorer">🔍</a></h3>
       <div class="badge-grid" id="badge-grid"></div>
     </div>
 
     <div class="ach-section">
-      <h3>🍰 Equivalent Fractions 1</h3>
+      <h3>🍰 Equivalent Fractions 1 <a class="header-tool" href="fraction_decimal.html" title="Fraction &amp; Decimal Explorer">🔍</a></h3>
       <div class="badge-grid" id="badge-grid-ef1"></div>
     </div>
 
     <div class="ach-section">
-      <h3>🎂 Equivalent Fractions 2</h3>
+      <h3>🎂 Equivalent Fractions 2 <a class="header-tool" href="fraction_decimal.html" title="Fraction &amp; Decimal Explorer">🔍</a></h3>
       <div class="badge-grid" id="badge-grid-ef2"></div>
     </div>
 
     <div class="ach-section">
-      <h3>🔟 Equivalent Fractions 3</h3>
+      <h3>🔟 Equivalent Fractions 3 <a class="header-tool" href="fraction_decimal.html" title="Fraction &amp; Decimal Explorer">🔍</a></h3>
       <div class="badge-grid" id="badge-grid-ef3"></div>
     </div>
   </section>
