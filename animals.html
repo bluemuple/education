@@ -240,6 +240,16 @@
     color: var(--muted);
     font-size: 0.9rem;
   }
+  #charlieLink {
+    cursor: pointer;
+    outline: none;
+    border-radius: 4px;
+    padding: 1px 3px;
+  }
+  #charlieLink:hover, #charlieLink:focus {
+    color: var(--primary-dark);
+    background: rgba(255, 154, 162, 0.1);
+  }
 
   @media (max-width: 600px) {
     .animals-grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 12px; }
@@ -263,7 +273,7 @@
 
     <main id="categoriesRoot"></main>
 
-    <footer>Made by Mr. Charlie with 💖 for curious learners</footer>
+    <footer>Made by <span id="charlieLink" tabindex="0" role="button" title="Teacher login">Mr. Charlie</span> with 💖 for curious learners</footer>
   </div>
 
 <script src="animals-data.js"></script>
@@ -346,6 +356,23 @@
 
   searchInput.addEventListener('input', e => render(e.target.value));
   render();
+
+  // Teacher login: click "Mr. Charlie" in the footer → password 2316 → admin page.
+  function charlieLogin() {
+    const pw = prompt('Teacher password:');
+    if (pw === null) return;
+    if (pw === '2316') {
+      localStorage.setItem('admin_auth', '2316');
+      window.location = 'animals-admin.html';
+    } else {
+      alert('Wrong password.');
+    }
+  }
+  const charlieEl = document.getElementById('charlieLink');
+  charlieEl.addEventListener('click', charlieLogin);
+  charlieEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); charlieLogin(); }
+  });
 </script>
 </body>
 </html>

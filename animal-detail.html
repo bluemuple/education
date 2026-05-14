@@ -274,6 +274,31 @@
     font-weight: 700;
     font-size: 1.15rem;
   }
+  .collapsible-header {
+    cursor: pointer;
+    user-select: none;
+  }
+  .collapsible-header::after {
+    content: "▾";
+    margin-left: auto;
+    color: var(--muted);
+    font-size: 1.1rem;
+    transition: transform 0.2s ease;
+  }
+  .collapsible.collapsed .collapsible-header::after {
+    transform: rotate(-90deg);
+  }
+  .collapsible.collapsed .collapsible-header { margin-bottom: 0; }
+  .collapsible-body {
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.2s ease;
+    max-height: 2000px;
+    opacity: 1;
+  }
+  .collapsible.collapsed .collapsible-body {
+    max-height: 0;
+    opacity: 0;
+  }
   .info-icon {
     font-size: 1.5rem;
     width: 38px;
@@ -371,12 +396,52 @@
     .hero-emoji { font-size: 5.5rem; }
     .hero-card { padding: 30px 20px; }
   }
+
+  /* Edit button (teacher only) */
+  .edit-fab {
+    position: fixed;
+    top: 18px;
+    right: 18px;
+    background: white;
+    border: 2px solid var(--primary);
+    color: var(--primary-dark);
+    padding: 10px 16px;
+    border-radius: 999px;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    z-index: 50;
+    display: none;
+  }
+  .edit-fab.shown { display: inline-flex; align-items: center; gap: 6px; }
+  .edit-fab:hover { background: var(--primary); color: white; }
+
+  footer {
+    text-align: center;
+    margin-top: 60px;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  #charlieLink {
+    cursor: pointer;
+    outline: none;
+    border-radius: 4px;
+    padding: 1px 3px;
+  }
+  #charlieLink:hover, #charlieLink:focus {
+    color: var(--primary-dark);
+    background: rgba(255, 154, 162, 0.1);
+  }
 </style>
 </head>
 <body>
+  <button id="editFab" class="edit-fab" title="Edit this animal's pictures">✏️ Edit</button>
   <div class="container">
     <a class="back-link" href="animals.html">← Back to all animals</a>
     <div id="content"></div>
+    <footer>Made by <span id="charlieLink" tabindex="0" role="button" title="Teacher login">Mr. Charlie</span> with 💖 for curious learners</footer>
   </div>
 
 <script src="animals-data.js"></script>
@@ -437,42 +502,59 @@
       </div>
 
       <div class="info-grid">
-        <div class="info-card">
-          <div class="info-header">
+        <div class="info-card collapsible">
+          <div class="info-header collapsible-header" role="button" tabindex="0">
             <div class="info-icon">🏞️</div>
             <span>Habitat</span>
           </div>
-          <div class="info-body">${escapeHTML(animal.habitat || '')}</div>
+          <div class="collapsible-body">
+            <div class="info-body">${escapeHTML(animal.habitat || '')}</div>
+          </div>
         </div>
-        <div class="info-card diet">
-          <div class="info-header">
+        <div class="info-card diet collapsible">
+          <div class="info-header collapsible-header" role="button" tabindex="0">
             <div class="info-icon">🍽️</div>
             <span>Diet</span>
           </div>
-          <div class="info-body">${escapeHTML(animal.diet || '')}</div>
+          <div class="collapsible-body">
+            <div class="info-body">${escapeHTML(animal.diet || '')}</div>
+          </div>
         </div>
       </div>
 
       ${facts.length ? `
-      <div class="facts-card">
-        <h2><div class="info-icon">💡</div>Fun Facts</h2>
-        <ul class="facts-list">
-          ${facts.map(f => `<li>${escapeHTML(f)}</li>`).join('')}
-        </ul>
+      <div class="facts-card collapsible">
+        <h2 class="collapsible-header" role="button" tabindex="0"><div class="info-icon">💡</div>Fun Facts</h2>
+        <div class="collapsible-body">
+          <ul class="facts-list">
+            ${facts.map(f => `<li>${escapeHTML(f)}</li>`).join('')}
+          </ul>
+        </div>
       </div>` : ''}
 
       ${ytId ? `
-      <div class="video-card">
-        <h2><div class="info-icon">🎬</div>Watch & Learn</h2>
-        <div class="video-frame">
-          <iframe
-            src="https://www.youtube.com/embed/${encodeURIComponent(ytId)}"
-            title="${escapeHTML(animal.name)} video"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowfullscreen></iframe>
+      <div class="video-card collapsible">
+        <h2 class="collapsible-header" role="button" tabindex="0"><div class="info-icon">🎬</div>Watch & Learn</h2>
+        <div class="collapsible-body">
+          <div class="video-frame">
+            <iframe
+              src="https://www.youtube.com/embed/${encodeURIComponent(ytId)}"
+              title="${escapeHTML(animal.name)} video"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen></iframe>
+          </div>
         </div>
       </div>` : ''}
     `;
+
+    // Wire up collapse/expand on every collapsible header.
+    document.querySelectorAll('.collapsible-header').forEach(h => {
+      const toggle = () => h.closest('.collapsible').classList.toggle('collapsed');
+      h.addEventListener('click', toggle);
+      h.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+      });
+    });
 
     // Build the 3-cell gallery: photo / cartoon / coloring.
     // Each cell may have multiple images (teacher additions). Dots under the cell
@@ -591,6 +673,35 @@
       renderCell('cartoons', set.cartoons);
       renderCell('coloringPages', set.coloringPages);
     }).catch(() => {});
+
+    // Show the Edit button only when the teacher is signed in. Click it to
+    // jump straight into the admin editor for this animal.
+    const editFab = document.getElementById('editFab');
+    if (localStorage.getItem('admin_auth') === '2316') {
+      editFab.classList.add('shown');
+      editFab.addEventListener('click', () => {
+        window.location = `animals-admin.html?open=${encodeURIComponent(animal.id)}`;
+      });
+    }
+  }
+
+  // Footer "Mr. Charlie" → teacher login.
+  function charlieLogin() {
+    const pw = prompt('Teacher password:');
+    if (pw === null) return;
+    if (pw === '2316') {
+      localStorage.setItem('admin_auth', '2316');
+      window.location = 'animals-admin.html';
+    } else {
+      alert('Wrong password.');
+    }
+  }
+  const charlieEl = document.getElementById('charlieLink');
+  if (charlieEl) {
+    charlieEl.addEventListener('click', charlieLogin);
+    charlieEl.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); charlieLogin(); }
+    });
   }
 </script>
 </body>

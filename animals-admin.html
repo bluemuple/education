@@ -515,6 +515,7 @@
         <a class="btn ghost" href="animals.html">👁 View site</a>
         <button id="exportBtn" class="btn ghost">⬇ Export</button>
         <button id="importBtn" class="btn ghost">⬆ Import</button>
+        <button id="logoutBtn" class="btn ghost" title="Sign out and lock the admin">🔒 Log out</button>
         <input id="importFile" type="file" accept="application/json" hidden>
         <button id="resetAllBtn" class="btn danger">↺ Reset all</button>
       </div>
@@ -631,6 +632,22 @@
   <div class="toast" id="toast"></div>
 
 <script src="animals-data.js"></script>
+<script>
+// ---------- Password gate ----------
+// Admin actions require the teacher to have logged in via the "Mr. Charlie"
+// link in the footer of the student pages. If they hit this URL directly we
+// prompt for the password here too.
+(function gate() {
+  if (localStorage.getItem('admin_auth') === '2316') return;
+  const pw = prompt('Teacher password:');
+  if (pw === '2316') {
+    localStorage.setItem('admin_auth', '2316');
+    return;
+  }
+  alert('Wrong password.');
+  window.location = 'animals.html';
+})();
+</script>
 <script>
 (() => {
   const listRoot       = document.getElementById('listRoot');
@@ -1110,6 +1127,11 @@
   resetAllBtn.addEventListener('click', resetAll);
   exportBtn.addEventListener('click', exportAll);
   importBtn.addEventListener('click', () => importFile.click());
+  document.getElementById('logoutBtn').addEventListener('click', () => {
+    if (!confirm('Log out and lock the admin?')) return;
+    localStorage.removeItem('admin_auth');
+    window.location = 'animals.html';
+  });
   importFile.addEventListener('change', e => {
     if (e.target.files[0]) importAll(e.target.files[0]);
     e.target.value = '';
@@ -1181,6 +1203,12 @@
   filterEdited.addEventListener('change', renderList);
 
   renderList();
+
+  // ---------- Deep-link: ?open=<id> auto-opens that animal's editor ----------
+  const _qsOpen = new URLSearchParams(window.location.search).get('open');
+  if (_qsOpen) {
+    setTimeout(() => openEditor(_qsOpen), 80);
+  }
 })();
 </script>
 </body>
