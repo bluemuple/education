@@ -1342,55 +1342,203 @@ const ANIMAL_PHOTO_URLS = {
   "guinea-pig": "animals/guinea-pig.jpg"
 };
 
-// Returns the Wikipedia photo URL for an animal. Synchronous lookup against the
-// pre-fetched map above — no network call needed. (Async signature kept so callers
-// don't need to change.)
+// Pre-fetched cartoon image paths (Openverse, CC-licensed, kid-appropriate).
+// Some NZ-specific animals don't have cartoon results — those are missing here
+// and the page falls back to the emoji. Teachers can add their own via the admin.
+const ANIMAL_CARTOON_URLS = {
+  "kiwi": "cartoons/kiwi.jpg",
+  "kea": "cartoons/kea.jpg",
+  "kakapo": "cartoons/kakapo.jpg",
+  "pukeko": "cartoons/pukeko.jpg",
+  "fantail": "cartoons/fantail.jpg",
+  "hector-dolphin": "cartoons/hector-dolphin.jpg",
+  "hoiho": "cartoons/hoiho.jpg",
+  "nz-sealion": "cartoons/nz-sealion.jpg",
+  "weta": "cartoons/weta.png",
+  "morepork": "cartoons/morepork.png",
+  "dolphin": "cartoons/dolphin.jpg",
+  "shark": "cartoons/shark.jpg",
+  "whale": "cartoons/whale.png",
+  "octopus": "cartoons/octopus.jpg",
+  "sea-turtle": "cartoons/sea-turtle.png",
+  "jellyfish": "cartoons/jellyfish.png",
+  "seahorse": "cartoons/seahorse.jpg",
+  "starfish": "cartoons/starfish.jpg",
+  "crab": "cartoons/crab.jpg",
+  "lobster": "cartoons/lobster.jpg",
+  "stingray": "cartoons/stingray.jpg",
+  "clownfish": "cartoons/clownfish.jpg",
+  "orca": "cartoons/orca.jpg",
+  "seal": "cartoons/seal.jpg",
+  "manta-ray": "cartoons/manta-ray.jpg",
+  "lion": "cartoons/lion.jpg",
+  "tiger": "cartoons/tiger.jpg",
+  "elephant": "cartoons/elephant.png",
+  "giraffe": "cartoons/giraffe.jpg",
+  "zebra": "cartoons/zebra.jpg",
+  "monkey": "cartoons/monkey.jpg",
+  "gorilla": "cartoons/gorilla.jpg",
+  "panda": "cartoons/panda.jpg",
+  "polar-bear": "cartoons/polar-bear.jpg",
+  "kangaroo": "cartoons/kangaroo.jpg",
+  "koala": "cartoons/koala.jpg",
+  "wolf": "cartoons/wolf.jpg",
+  "fox": "cartoons/fox.png",
+  "bear": "cartoons/bear.jpg",
+  "cheetah": "cartoons/cheetah.png",
+  "leopard": "cartoons/leopard.png",
+  "hippo": "cartoons/hippo.png",
+  "rhino": "cartoons/rhino.jpg",
+  "camel": "cartoons/camel.jpg",
+  "sloth": "cartoons/sloth.jpg",
+  "eagle": "cartoons/eagle.jpg",
+  "owl": "cartoons/owl.png",
+  "penguin": "cartoons/penguin.jpg",
+  "parrot": "cartoons/parrot.jpg",
+  "flamingo": "cartoons/flamingo.jpg",
+  "peacock": "cartoons/peacock.jpg",
+  "hummingbird": "cartoons/hummingbird.jpg",
+  "toucan": "cartoons/toucan.jpg",
+  "pelican": "cartoons/pelican.jpg",
+  "swan": "cartoons/swan.png",
+  "duck": "cartoons/duck.jpg",
+  "ostrich": "cartoons/ostrich.jpg",
+  "woodpecker": "cartoons/woodpecker.jpg",
+  "robin": "cartoons/robin.jpg",
+  "seagull": "cartoons/seagull.png",
+  "crocodile": "cartoons/crocodile.jpg",
+  "snake": "cartoons/snake.jpg",
+  "gecko": "cartoons/gecko.jpg",
+  "chameleon": "cartoons/chameleon.png",
+  "frog": "cartoons/frog.jpg",
+  "toad": "cartoons/toad.jpg",
+  "turtle": "cartoons/turtle.jpg",
+  "iguana": "cartoons/iguana.png",
+  "salamander": "cartoons/salamander.jpg",
+  "butterfly": "cartoons/butterfly.jpg",
+  "bee": "cartoons/bee.jpg",
+  "ladybug": "cartoons/ladybug.jpg",
+  "ant": "cartoons/ant.png",
+  "spider": "cartoons/spider.jpg",
+  "dragonfly": "cartoons/dragonfly.jpg",
+  "grasshopper": "cartoons/grasshopper.jpg",
+  "beetle": "cartoons/beetle.jpg",
+  "caterpillar": "cartoons/caterpillar.jpg",
+  "snail": "cartoons/snail.jpg",
+  "cow": "cartoons/cow.jpg",
+  "sheep": "cartoons/sheep.jpg",
+  "pig": "cartoons/pig.jpg",
+  "horse": "cartoons/horse.jpg",
+  "chicken": "cartoons/chicken.jpg",
+  "goat": "cartoons/goat.png",
+  "donkey": "cartoons/donkey.jpg",
+  "rooster": "cartoons/rooster.png",
+  "goose": "cartoons/goose.jpg",
+  "alpaca": "cartoons/alpaca.jpg",
+  "dog": "cartoons/dog.jpg",
+  "cat": "cartoons/cat.jpg",
+  "rabbit": "cartoons/rabbit.jpg",
+  "hamster": "cartoons/hamster.jpg",
+  "guinea-pig": "cartoons/guinea-pig.jpg"
+};
+
+// Pre-fetched coloring-page paths. Same caveat as cartoons.
+const ANIMAL_COLORING_URLS = {
+  "hector-dolphin": "coloring/hector-dolphin.jpg",
+  "hoiho": "coloring/hoiho.png",
+  "nz-sealion": "coloring/nz-sealion.jpg",
+  "weta": "coloring/weta.jpg",
+  "morepork": "coloring/morepork.jpg",
+  "dolphin": "coloring/dolphin.jpg",
+  "shark": "coloring/shark.jpg",
+  "octopus": "coloring/octopus.jpg",
+  "sea-turtle": "coloring/sea-turtle.jpg",
+  "jellyfish": "coloring/jellyfish.jpg",
+  "starfish": "coloring/starfish.jpg",
+  "crab": "coloring/crab.jpg",
+  "lobster": "coloring/lobster.jpg",
+  "clownfish": "coloring/clownfish.jpg",
+  "orca": "coloring/orca.jpg",
+  "seal": "coloring/seal.jpg",
+  "manta-ray": "coloring/manta-ray.jpg",
+  "lion": "coloring/lion.jpg",
+  "tiger": "coloring/tiger.jpg",
+  "elephant": "coloring/elephant.jpg",
+  "giraffe": "coloring/giraffe.jpg",
+  "zebra": "coloring/zebra.jpg",
+  "monkey": "coloring/monkey.jpg",
+  "gorilla": "coloring/gorilla.jpg",
+  "panda": "coloring/panda.jpg",
+  "polar-bear": "coloring/polar-bear.jpg",
+  "kangaroo": "coloring/kangaroo.jpg",
+  "koala": "coloring/koala.jpg",
+  "wolf": "coloring/wolf.jpg",
+  "fox": "coloring/fox.jpg",
+  "bear": "coloring/bear.png",
+  "cheetah": "coloring/cheetah.jpg",
+  "leopard": "coloring/leopard.jpg",
+  "hippo": "coloring/hippo.jpg",
+  "rhino": "coloring/rhino.jpg",
+  "camel": "coloring/camel.jpg",
+  "sloth": "coloring/sloth.jpg",
+  "eagle": "coloring/eagle.jpg",
+  "owl": "coloring/owl.jpg",
+  "penguin": "coloring/penguin.png",
+  "parrot": "coloring/parrot.jpg",
+  "flamingo": "coloring/flamingo.jpg",
+  "peacock": "coloring/peacock.jpg",
+  "hummingbird": "coloring/hummingbird.jpg",
+  "pelican": "coloring/pelican.jpg",
+  "swan": "coloring/swan.jpg",
+  "duck": "coloring/duck.jpg",
+  "ostrich": "coloring/ostrich.jpg",
+  "woodpecker": "coloring/woodpecker.jpg",
+  "robin": "coloring/robin.jpg",
+  "seagull": "coloring/seagull.jpg",
+  "crocodile": "coloring/crocodile.jpg",
+  "snake": "coloring/snake.jpg",
+  "gecko": "coloring/gecko.jpg",
+  "chameleon": "coloring/chameleon.jpg",
+  "frog": "coloring/frog.jpg",
+  "toad": "coloring/toad.jpg",
+  "turtle": "coloring/turtle.jpg",
+  "iguana": "coloring/iguana.jpg",
+  "salamander": "coloring/salamander.jpg",
+  "butterfly": "coloring/butterfly.jpg",
+  "bee": "coloring/bee.jpg",
+  "ladybug": "coloring/ladybug.jpg",
+  "ant": "coloring/ant.jpg",
+  "spider": "coloring/spider.jpg",
+  "dragonfly": "coloring/dragonfly.jpg",
+  "grasshopper": "coloring/grasshopper.jpg",
+  "beetle": "coloring/beetle.jpg",
+  "caterpillar": "coloring/caterpillar.jpg",
+  "snail": "coloring/snail.jpg",
+  "cow": "coloring/cow.jpg",
+  "pig": "coloring/pig.jpg",
+  "horse": "coloring/horse.jpg",
+  "chicken": "coloring/chicken.jpg",
+  "goat": "coloring/goat.jpg",
+  "donkey": "coloring/donkey.jpg",
+  "rooster": "coloring/rooster.jpg",
+  "goose": "coloring/goose.jpg",
+  "dog": "coloring/dog.jpg",
+  "cat": "coloring/cat.jpg",
+  "rabbit": "coloring/rabbit.jpg",
+  "hamster": "coloring/hamster.jpg",
+  "guinea-pig": "coloring/guinea-pig.jpg"
+};
+
+// Returns the local photo path for an animal. Async signature kept for callers.
 async function fetchWikipediaImage(id) {
   return ANIMAL_PHOTO_URLS[id] || null;
 }
 
-// ---------- Openverse image fetching (cartoons + coloring pages) ----------
-function loadOpenverseCache() {
-  try { return JSON.parse(localStorage.getItem(OPENVERSE_CACHE_KEY) || "{}"); }
-  catch (e) { return {}; }
-}
-function saveOpenverseCache(c) {
-  try { localStorage.setItem(OPENVERSE_CACHE_KEY, JSON.stringify(c)); } catch (e) {}
-}
-
-// Fetches a kid-friendly cartoon or coloring-page image from the Openverse
-// open-license image index. category: 'cartoon' | 'coloring'.
-async function fetchOpenverseImage(id, searchName, category) {
-  if (!searchName) return null;
-  const cacheKey = `${id}__${category}`;
-  const cache = loadOpenverseCache();
-  if (cache[cacheKey]) return cache[cacheKey];
-
-  const query = category === "cartoon"
-    ? `${searchName} cartoon`
-    : `${searchName} coloring page`;
-
-  try {
-    const url = `https://api.openverse.org/v1/images/?q=${encodeURIComponent(query)}&page_size=10`;
-    const resp = await fetch(url);
-    if (!resp.ok) return null;
-    const data = await resp.json();
-    const results = (data && data.results) || [];
-    if (results.length === 0) return null;
-
-    // Prefer cleaner-clipart providers first.
-    let best = results.find(r => r.provider === "rawpixel");
-    if (!best) best = results.find(r => r.provider === "wikimedia");
-    if (!best) best = results[0];
-    const imgUrl = best && best.url;
-    if (imgUrl) {
-      cache[cacheKey] = imgUrl;
-      saveOpenverseCache(cache);
-    }
-    return imgUrl || null;
-  } catch (e) {
-    return null;
-  }
+// Returns the local cartoon / coloring-page path for an animal. No network call.
+// `category` is "cartoon" or "coloring"; the third arg is kept for API compat.
+async function fetchOpenverseImage(id, _searchName, category) {
+  const map = category === "cartoon" ? ANIMAL_CARTOON_URLS : ANIMAL_COLORING_URLS;
+  return map[id] || null;
 }
 
 // Teacher's custom additions per category. Handles legacy `image` and `images`.
