@@ -314,6 +314,17 @@ const ANIMALS = [
       "They have the biggest brain of any fish."
     ]
   },
+  { id: "blue-whale", name: "Blue Whale", emoji: "🐳", category: "marine",
+    habitat: "All the world's oceans, especially open seas.",
+    diet: "Tiny shrimp called krill — they eat up to 4 tonnes a day!",
+    funFacts: [
+      "Blue whales are the biggest animals that have EVER lived — bigger than any dinosaur.",
+      "A blue whale's heart weighs about as much as a small car.",
+      "A baby blue whale gains around 90 kg (200 lb) every single day.",
+      "Their tongue alone can weigh as much as an elephant.",
+      "Their call is louder than a jet engine and can travel hundreds of kilometres underwater."
+    ]
+  },
 
   // ===== WILD MAMMALS (20) =====
   { id: "lion", name: "Lion", emoji: "🦁", category: "mammals",
@@ -515,6 +526,28 @@ const ANIMALS = [
       "They only come down from trees once a week — to go to the toilet!",
       "Algae grow on their fur, helping them camouflage as green.",
       "Sloths can hold their breath underwater for 40 minutes."
+    ]
+  },
+  { id: "meerkat", name: "Meerkat", emoji: "🐾", category: "mammals",
+    habitat: "Dry plains and savannas of southern Africa.",
+    diet: "Insects, scorpions, lizards, eggs and small mammals.",
+    funFacts: [
+      "Meerkats live in big family groups called 'mobs' — up to 50 members!",
+      "They stand on their back legs as lookouts, like tiny furry soldiers.",
+      "Meerkats are immune to many scorpion stings.",
+      "The whole mob takes turns standing guard while others hunt or play.",
+      "Baby meerkats are called pups and are babysat by their older brothers and sisters."
+    ]
+  },
+  { id: "dire-wolf", name: "Dire Wolf", emoji: "🐺", category: "mammals",
+    habitat: "Lived across North and South America until about 10,000 years ago.",
+    diet: "Big prehistoric animals like ancient horses, bison and ground sloths.",
+    funFacts: [
+      "Dire wolves are EXTINCT — they died out at the end of the last ice age.",
+      "They were larger and stronger than today's gray wolves, with bigger teeth.",
+      "Their scientific name 'Aenocyon dirus' means 'terrible wolf'.",
+      "Over 4,000 dire wolf skeletons have been found in the La Brea Tar Pits in California.",
+      "In 2025, scientists used DNA to try to bring dire wolves back from extinction."
     ]
   },
 
@@ -1046,7 +1079,8 @@ const ANIMAL_WIKI = {
   jellyfish: "Jellyfish", seahorse: "Seahorse", starfish: "Starfish",
   crab: "Crab", lobster: "Lobster", stingray: "Stingray",
   clownfish: "Ocellaris clownfish", orca: "Orca", seal: "Harbor seal",
-  "manta-ray": "Manta ray",
+  "manta-ray": "Manta ray", "blue-whale": "Blue whale",
+  "meerkat": "Meerkat", "dire-wolf": "Dire wolf",
   // Wild Mammals
   lion: "Lion", tiger: "Tiger", elephant: "Elephant", giraffe: "Giraffe",
   zebra: "Plains zebra", monkey: "Monkey", gorilla: "Gorilla",
@@ -1097,7 +1131,8 @@ const ANIMAL_VIDEO_SUGGESTIONS = {
   jellyfish: "u9Q9knJlhww",  seahorse: "XqP0xqbnAMU",   starfish: "SpC6H-RkPyE",
   crab: "85lFKu_IwCA",       lobster: "jKzjSj1VO3E",    stingray: "nJEKCmi8Hyk",
   clownfish: "vW5RI8xUW7Y",  orca: "4YOvkXNZ16I",       seal: "bxF1L3i1A9Q",
-  "manta-ray": "SFVueRCmoeI",
+  "manta-ray": "SFVueRCmoeI", "blue-whale": "GSmBYqmz4Y4",
+  "meerkat": "WxGNTkA20XI", "dire-wolf": "aSqjiJQehek",
 
   // Wild Mammals
   lion: "tlZwYsJpqjo",       tiger: "8OmRW4em_vA",      elephant: "Fk3VdpuFx0Q",
@@ -1172,6 +1207,9 @@ const ANIMAL_SEARCH_NAMES = {
   "polar-bear": "polar bear",
   "sea-turtle": "sea turtle",
   "manta-ray": "manta ray",
+  "blue-whale": "blue whale",
+  "meerkat": "meerkat",
+  "dire-wolf": "wolf",
   snake: "snake reptile",
   komodo: "komodo dragon",
   "guinea-pig": "guinea pig"
@@ -1270,6 +1308,9 @@ const ANIMAL_PHOTO_URLS = {
   "orca": "animals/orca.jpg",
   "seal": "animals/seal.jpg",
   "manta-ray": "animals/manta-ray.jpg",
+  "blue-whale": "animals/blue-whale.jpg",
+  "meerkat": "animals/meerkat.jpg",
+  "dire-wolf": "animals/dire-wolf.jpg",
   "lion": "animals/lion.jpg",
   "tiger": "animals/tiger.jpg",
   "elephant": "animals/elephant.jpg",
@@ -1371,6 +1412,8 @@ const ANIMAL_CARTOON_URLS = {
   "orca": "cartoons/orca.jpg",
   "seal": "cartoons/seal.jpg",
   "manta-ray": "cartoons/manta-ray.jpg",
+  "blue-whale": "cartoons/blue-whale.jpg",
+  "dire-wolf": "cartoons/dire-wolf.jpg",
   "lion": "cartoons/lion.jpg",
   "tiger": "cartoons/tiger.jpg",
   "elephant": "cartoons/elephant.png",
