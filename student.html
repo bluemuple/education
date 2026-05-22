@@ -406,6 +406,38 @@ function saveSession(){ try { sessionStorage.setItem(SESSION_KEY, JSON.stringify
 function loadSession(){ try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null'); } catch(e){ return null; } }
 function clearSession(){ try { sessionStorage.removeItem(SESSION_KEY); } catch(e){} }
 
+// Shared auth with the WordCatch reading app — if the student is
+// already signed in there (wc.session.v1 in localStorage), look up
+// or create the matching maths-game student record so they don't
+// have to pick their name again. Phase B of the cross-app login.
+const WC_SESSION_KEY = 'wc.session.v1';
+function loadWordCatchSession(){
+  try { return JSON.parse(localStorage.getItem(WC_SESSION_KEY) || 'null'); }
+  catch(e){ return null; }
+}
+async function autoResolveFromWordCatchSession(){
+  const wc = loadWordCatchSession();
+  if (!wc || !wc.real_name) return null;
+  const wantName = String(wc.real_name).trim().toLowerCase();
+  if (!wantName) return null;
+  let list;
+  try { list = await DB.listStudents(); } catch(e){ return null; }
+  const match = (list || []).find(s =>
+    String(s.name || '').trim().toLowerCase() === wantName);
+  if (match) {
+    return { gender: match.gender || 'girl', id: match.id, name: match.name };
+  }
+  // No matching maths row → create one so this student has an
+  // identity in the maths app on their first visit. Default to the
+  // gender the WordCatch session carries, falling back to 'girl'.
+  try {
+    const gender = (wc.gender === 'boy' ? 'boy' : 'girl');
+    const created = await DB.addStudent(String(wc.real_name).trim(), gender);
+    if (created) return { gender: created.gender, id: created.id, name: created.name };
+  } catch(e){}
+  return null;
+}
+
 function showScreen(id) {
   ['screen-gender','screen-name','screen-confirm','screen-page2','screen-ranking',
    'screen-achievement','screen-profile']
@@ -1150,7 +1182,18 @@ $('pm-save').onclick = async () => {
 // ---------- boot ----------
 (async () => {
   TTS.loadVoices(); // warm up voices list
-  const sess = loadSession();
+  // Prefer an in-tab maths session; otherwise inherit the
+  // WordCatch reading session and either match the student by
+  // name or auto-provision them.
+  let sess = loadSession();
+  if (!sess || !sess.id) {
+    const resolved = await autoResolveFromWordCatchSession();
+    if (resolved) {
+      sess = resolved;
+      state.gender = sess.gender; state.studentId = sess.id; state.studentName = sess.name;
+      saveSession();
+    }
+  }
   const urlParams = new URLSearchParams(location.search);
   const goParam = urlParams.get('go'); // e.g. 'game1' or 'game2'
   const subjectParam = urlParams.get('subject'); // e.g. 'ef1'
