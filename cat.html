@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>고양이 말풍선</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Jua&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --pink:   #f8d2d8;
+      --pink-2: #fbe3e7;
+      --cream:  #f6efe6;
+      --ink:    #4a3228;     /* 말풍선 글자색 (테두리 갈색 톤) */
+      --border: #e7b9c1;
+      --accent: #ef9aa6;
+      --muted:  #9a7d80;
+    }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(160deg, var(--pink) 0%, var(--pink-2) 55%, #fff6f2 100%);
+      font-family: 'Jua', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
+      color: var(--ink);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+
+    .stage {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+    }
+
+    /* ── 고양이 + 말풍선 ───────────────────────────── */
+    .cat-wrap {
+      position: relative;
+      width: 100%;
+      line-height: 0;
+      filter: drop-shadow(0 14px 28px rgba(180, 110, 120, .28));
+    }
+
+    .cat {
+      width: 100%;
+      height: auto;
+      display: block;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    /* 말풍선 내부 사각형 본체 영역 (이미지 비율 기준 %)
+       크림 내부: 좌4.8 상5.6 우53 하(본체)~22 → 안쪽 여백 두고 배치 */
+    .bubble {
+      position: absolute;
+      left: 8%;
+      top: 7%;
+      width: 42%;
+      height: 14.2%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      padding: 2px 4px;
+      pointer-events: none;
+    }
+
+    .bubble-text {
+      width: 100%;
+      text-align: center;
+      line-height: 1.12;
+      font-family: 'Gaegu', 'Jua', sans-serif;
+      font-weight: 700;
+      color: var(--ink);
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+
+    .bubble-text.pop { animation: pop .3s cubic-bezier(.2,.8,.3,1.2); }
+    @keyframes pop {
+      0%   { opacity: 0; transform: translateY(5px) scale(.92); }
+      100% { opacity: 1; transform: none; }
+    }
+
+    /* ── 입력 패널 ─────────────────────────────────── */
+    .panel {
+      width: 100%;
+      background: rgba(255, 255, 255, .72);
+      backdrop-filter: blur(6px);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 14px;
+      box-shadow: 0 8px 22px rgba(190, 120, 130, .18);
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 96px;
+      resize: vertical;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      background: #fff;
+      color: #5a3f37;
+      font-family: inherit;
+      font-size: 1rem;
+      line-height: 1.5;
+      padding: 10px 12px;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    textarea::placeholder { color: #c9a7ac; }
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(239, 154, 166, .25);
+    }
+
+    .meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 9px;
+      font-size: .82rem;
+    }
+
+    .hint { color: var(--muted); }
+
+    .counter {
+      font-variant-numeric: tabular-nums;
+      color: var(--muted);
+      background: rgba(239, 154, 166, .14);
+      padding: 3px 10px;
+      border-radius: 999px;
+      white-space: nowrap;
+      transition: color .15s, background .15s;
+    }
+    .counter.near { color: #d98324; background: rgba(217, 131, 36, .14); }
+    .counter.full { color: #d6455a; background: rgba(214, 69, 90, .16); font-weight: 700; }
+
+    .title {
+      font-size: 1.05rem;
+      color: #b56b78;
+      letter-spacing: -.2px;
+    }
+  </style>
+</head>
+<body>
+
+  <main class="stage">
+    <div class="title">😺 고양이에게 말풍선 채워주기</div>
+
+    <div class="cat-wrap">
+      <img class="cat" src="cat.png" alt="말풍선을 든 고양이" draggable="false">
+      <div class="bubble"><div class="bubble-text" id="bubbleText"></div></div>
+    </div>
+
+    <section class="panel">
+      <textarea id="input" maxlength="150"
+        placeholder="여기에 입력하면 말풍선에 나타나요.&#10;줄을 여러 개 쓰면 5초마다 랜덤으로 바뀌어요! 🐾"></textarea>
+      <div class="meta">
+        <span class="hint">한 줄 = 말풍선 한 마디 · 5초마다 랜덤 교체</span>
+        <span class="counter" id="counter">0/150</span>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const input      = document.getElementById('input');
+    const counter    = document.getElementById('counter');
+    const bubble     = document.querySelector('.bubble');
+    const bubbleText = document.getElementById('bubbleText');
+
+    // 말풍선 본체에 보기 좋게 들어가는 분량을 기준으로 산정:
+    // 한 화면(말풍선)에 ~3줄 × ~16자(한글) ≈ 48자가 읽기 좋고,
+    // 입력창은 여러 마디(줄)를 담으므로 그 약 3배인 150자를 상한으로 둠.
+    const MAX       = 150;
+    const ROTATE_MS = 5000;
+
+    let current = -1;   // 현재 말풍선에 떠 있는 줄의 인덱스
+    let timer   = null; // 5초 교체 타이머
+
+    function startRotation() { clearInterval(timer); timer = setInterval(rotate, ROTATE_MS); }
+    function stopRotation()  { clearInterval(timer); timer = null; }
+
+    // 입력값을 줄 단위로 쪼개서 공백/빈 줄 제거
+    function getLines() {
+      return input.value.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    }
+
+    // 글자 크기를 줄여가며 말풍선 안에 딱 맞게
+    function fit() {
+      if (!bubbleText.textContent) return;
+      let size = Math.min(Math.floor(bubble.clientHeight), 46);
+      if (size < 8) size = 8;
+      bubbleText.style.fontSize = size + 'px';
+      let guard = 80;
+      while (guard-- > 0 && size > 8 &&
+            (bubbleText.scrollHeight > bubble.clientHeight ||
+             bubbleText.scrollWidth  > bubble.clientWidth)) {
+        size -= 1;
+        bubbleText.style.fontSize = size + 'px';
+      }
+    }
+
+    function setBubble(text) {
+      bubbleText.textContent = text || '';
+      fit();
+      bubbleText.classList.remove('pop');
+      void bubbleText.offsetWidth;   // 애니메이션 재시작
+      if (text) bubbleText.classList.add('pop');
+    }
+
+    function updateCounter() {
+      const n = input.value.length;
+      counter.textContent = n + '/' + MAX;
+      counter.classList.toggle('full', n >= MAX);
+      counter.classList.toggle('near', n >= MAX * 0.8 && n < MAX);
+    }
+
+    // 5초마다: 여러 줄이면 랜덤(직전과 다른 줄)으로 교체
+    function rotate() {
+      const lines = getLines();
+      if (lines.length <= 1) return;       // 한 줄 이하면 교체할 게 없음
+      let idx;
+      do {
+        idx = Math.floor(Math.random() * lines.length);
+      } while (idx === current && lines.length > 1);
+      current = idx;
+      setBubble(lines[idx]);
+    }
+
+    input.addEventListener('input', () => {
+      updateCounter();
+      const lines = getLines();
+      if (lines.length === 0) { current = -1; setBubble(''); stopRotation(); return; }
+      // 한 줄이면 교체 없이 그 줄만 즉시 표시
+      if (lines.length === 1) { current = 0; setBubble(lines[0]); stopRotation(); return; }
+      // 여러 줄: 처음이거나 표시 중인 내용이 사라졌으면 첫 줄부터 보여주고,
+      // 그렇지 않으면 보던 줄을 유지. 5초 타이머는 입력이 멈춘 시점 기준으로 리셋돼
+      // → "첫 줄 표시 후 다음 줄은 5초 뒤" 가 자연스럽게 지켜짐.
+      const shown = bubbleText.textContent;
+      if (!shown || !lines.includes(shown)) {
+        current = 0;
+        setBubble(lines[0]);
+      } else {
+        current = lines.indexOf(shown);
+      }
+      startRotation();
+    });
+    window.addEventListener('resize', fit);
+    updateCounter();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+  </script>
+
+</body>
+</html>
